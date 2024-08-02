@@ -60,6 +60,7 @@ const getLicensingClient = () => {
     if (!fs.existsSync(licenseClientPath)) {
         throw Error(`Unity Licensing Client not found at path: ${licenseClientPath}`);
     }
+    fs.accessSync(licenseClientPath, fs.constants.X_OK);
     return licenseClientPath;
 };
 

@@ -16,6 +16,7 @@ async function Deactivate() {
         }
     } catch (error) {
         core.setFailed(`Failed to deactivate license!\n${error}`);
+        process.exit(1);
     }
 };
 

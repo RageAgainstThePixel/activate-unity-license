@@ -26183,6 +26183,7 @@ async function Activate() {
     } catch (error) {
         core.setFailed(`Unity License Activation Failed!\n${error}`);
         copyLogs();
+        process.exit(1);
     }
 }
 
@@ -26245,6 +26246,7 @@ async function Deactivate() {
         }
     } catch (error) {
         core.setFailed(`Failed to deactivate license!\n${error}`);
+        process.exit(1);
     }
 };
 
@@ -26318,6 +26320,7 @@ const getLicensingClient = () => {
     if (!fs.existsSync(licenseClientPath)) {
         throw Error(`Unity Licensing Client not found at path: ${licenseClientPath}`);
     }
+    fs.accessSync(licenseClientPath, fs.constants.X_OK);
     return licenseClientPath;
 };
 
@@ -28369,7 +28372,6 @@ const main = async () => {
     } else {
         await Deactivate();
     }
-    process.exit(0);
 }
 
 main();

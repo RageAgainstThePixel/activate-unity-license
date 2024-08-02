@@ -31,6 +31,7 @@ async function Activate() {
     } catch (error) {
         core.setFailed(`Unity License Activation Failed!\n${error}`);
         copyLogs();
+        process.exit(1);
     }
 }
 
