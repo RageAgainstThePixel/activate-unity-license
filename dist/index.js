@@ -28716,7 +28716,7 @@ const path = __nccwpck_require__(1017);
 const platform = process.platform;
 
 async function getLicensingClient() {
-    const editorPath = platform !== 'darwin' ? path.join(process.env.UNITY_EDITOR_PATH, '..') : path.join(process.env.UNITY_EDITOR_PATH, '..', '..');
+    const editorPath = process.env.UNITY_EDITOR_PATH;
     const version = process.env.UNITY_EDITOR_VERSION || editorPath.match(/(\d+\.\d+\.\d+[a-z]?\d?)/)[0];
     core.info(`Unity Editor Path: ${editorPath}`);
     core.info(`Unity Version: ${version}`);
