@@ -7,13 +7,13 @@ const platform = process.platform;
 
 async function Activate() {
     try {
-        const hasExistingLicense = await licenseClient.CheckExistingLicense();
-        if (hasExistingLicense) {
+        let hasLicense = await licenseClient.CheckExistingLicense();
+        if (hasLicense) {
             core.info('Unity License already activated!');
             return;
         } else {
             core.startGroup('Attempting to activate Unity License...');
-            await licenseClient.version();
+            await licenseClient.Version();
         }
         const editorPath = process.env.UNITY_EDITOR_PATH;
         if (!editorPath) {
@@ -23,12 +23,13 @@ async function Activate() {
         const username = core.getInput('username', { required: true });
         const password = core.getInput('password', { required: true });
         const serial = core.getInput('serial', { required: licenseType.toLowerCase().startsWith('pro') });
-        await licenseClient.activateLicense(username, password, serial);
+        await licenseClient.ActivateLicense(username, password, serial);
         core.saveState('isPost', true);
-        if (!licenseClient.hasExistingLicense()) {
+        hasLicense = await licenseClient.CheckExistingLicense();
+        if (!hasLicense) {
             throw Error('Unable to find Unity License!');
         }
-        await licenseClient.showEntitlements();
+        await licenseClient.ShowEntitlements();
     } catch (error) {
         core.setFailed(`Unity License Activation Failed!\n${error}`);
         copyLogs();

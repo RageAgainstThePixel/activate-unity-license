@@ -36,7 +36,6 @@ jobs:
             build_targets: StandaloneWindows64
           - os: macos-13
             build_targets: StandaloneOSX
-            modules: mac-server
           - os: macos-latest
             build_targets: StandaloneOSX
     steps:

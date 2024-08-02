@@ -21,10 +21,11 @@ async function getLicensingClient() {
     const major = version.split('.')[0];
     // if 2019.3 or older, use unity editor hub licensing client
     if (major < 2020) {
+        const unityHubPath = process.env.UNITY_HUB_PATH;
         // C:\Program Files\Unity Hub\UnityLicensingClient_V1
         // /Applications/Unity\ Hub.app/Contents/MacOS/Unity\ Hub/UnityLicensingClient_V1
         // ~/Applications/Unity\ Hub.AppImage/UnityLicensingClient_V1
-        const globPattern = path.resolve('**', 'Unity Hub*', 'UnityLicensingClient_V1');
+        const globPattern = path.join(unityHubPath, '..', '**', 'UnityLicensingClient_V1');
         const globber = await glob.create(globPattern);
         const files = await globber.glob();
         if (files.length > 0) {
@@ -156,16 +157,16 @@ async function CheckExistingLicense() {
     return hasUfl === true;
 }
 
-async function version() {
+async function Version() {
     await execWithMask([`--version`]);
 }
 
-async function showEntitlements() {
+async function ShowEntitlements() {
     await execWithMask([`--show-entitlements`]);
 }
 
-async function activateLicense(username, password, serial) {
-    let args = [`--activate-ulf`, `--username`, `"${username}"`, `--password`, `"${password}"`];
+async function ActivateLicense(username, password, serial) {
+    let args = [`--activate-ulf`, `--username`, username, `--password`, password];
     if (serial !== undefined && serial.length > 0) {
         args.push([`--serial`, `"${serial}"`]);
         const maskedSerial = serial.slice(0, -4) + `XXXX`;
@@ -174,9 +175,9 @@ async function activateLicense(username, password, serial) {
     await execWithMask(args);
 }
 
-async function returnLicense() {
+async function ReturnLicense() {
     await execWithMask([`--return-ulf`]);
     await showEntitlements();
 }
 
-module.exports = { CheckExistingLicense, version, showEntitlements, activateLicense, returnLicense };
+module.exports = { CheckExistingLicense, Version, ShowEntitlements, ActivateLicense, ReturnLicense };
