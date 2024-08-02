@@ -48,7 +48,7 @@ jobs:
         with:
           unity_version: ${{ matrix.unity_versions }}
           build_targets: ${{ matrix.build_targets }}
-      - uses: xrtk/activate-unity-license@main
+      - uses: xrtk/activate-unity-license@development
         with:
           license-type: Personal
           username: ${{ secrets.UNITY_USERNAME }}
