@@ -31,7 +31,7 @@ async function Activate() {
         }
         await licenseClient.ShowEntitlements();
     } catch (error) {
-        core.setFailed(`Unity License Activation Failed!\n${error}`);
+        core.setFailed(`Unity License Activation Failed!\n::error::${error}`);
         copyLogs();
         process.exit(1);
     }

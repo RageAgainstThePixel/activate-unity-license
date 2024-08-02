@@ -28627,7 +28627,7 @@ async function Activate() {
         }
         await licenseClient.ShowEntitlements();
     } catch (error) {
-        core.setFailed(`Unity License Activation Failed!\n${error}`);
+        core.setFailed(`Unity License Activation Failed!\n::error::${error}`);
         copyLogs();
         process.exit(1);
     }
@@ -28691,7 +28691,7 @@ async function Deactivate() {
             console.info(`No Unity License was activated.`);
         }
     } catch (error) {
-        core.setFailed(`Failed to deactivate license!\n${error}`);
+        core.setFailed(`Failed to deactivate license!\n::error::${error}`);
         process.exit(1);
     }
 };
@@ -28727,16 +28727,21 @@ async function getLicensingClient() {
     const major = version.split('.')[0];
     // if 2019.3 or older, use unity editor hub licensing client
     if (major < 2020) {
+        const unityHubPath = process.env.UNITY_HUB_PATH || process.env.HOME;
+        core.info(`Unity Hub Path: ${unityHubPath}`);
+        await fs.access(unityHubPath, fs.constants.R_OK);
         // C:\Program Files\Unity Hub\UnityLicensingClient_V1
         // /Applications/Unity\ Hub.app/Contents/MacOS/Unity\ Hub/UnityLicensingClient_V1
         // ~/Applications/Unity\ Hub.AppImage/UnityLicensingClient_V1
-        const globPattern = path.resolve('**', 'Unity Hub*', 'UnityLicensingClient_V1');
+        const globPattern = path.resolve(unityHubPath, '..', '**', 'UnityLicensingClient_V1');
+        core.info(`Unity Licensing Client Glob Pattern: ${globPattern}`);
         const globber = await glob.create(globPattern);
         const files = await globber.glob();
+        core.info(`Unity Licensing Client Files: ${files}`);
         if (files.length > 0) {
             licenseClientPath = files[0];
         } else {
-            throw Error(`Failed to find Unity Licensing Client in Unity Hub directory!\n "${globPattern}"`);
+            throw Error(`Failed to find Unity Licensing Client in Unity Hub directory!\n"${globPattern}"`);
         }
         core.info(`Unity Licensing Client Path: ${licenseClientPath}`);
         await fs.access(licenseClientPath, fs.constants.X_OK);
