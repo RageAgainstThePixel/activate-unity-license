@@ -29,7 +29,7 @@ async function getLicensingClient() {
         if (platform === 'win32') {
             globs.push('Unity.Licensing.Client.exe');
         } else {
-            globs.push('UnityLicensingClient');
+            globs.push('Unity.Licensing.Client');
         }
         licenseClientPath = await ResolveGlobPath(globs);
         core.info(`Unity Licensing Client Path: ${licenseClientPath}`);
@@ -47,7 +47,7 @@ async function getLicensingClient() {
         if (platform === 'win32') {
             globs.push('Unity.Licensing.Client.exe');
         } else {
-            globs.push('UnityLicensingClient');
+            globs.push('Unity.Licensing.Client');
         }
         licenseClientPath = await ResolveGlobPath(globs);
         core.info(`Unity Licensing Client Path: ${licenseClientPath}`);
