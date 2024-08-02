@@ -28913,10 +28913,10 @@ async function GetHubRootPath(hubPath) {
     let hubRootPath = hubPath;
     switch (process.platform) {
         case 'darwin':
-            hubRootPath = path.join(hubPath, '../../../../');
+            hubRootPath = path.join(hubPath, '../../../');
             break;
         case 'win32':
-            hubRootPath = path.join(hubPath, '../../');
+            hubRootPath = path.join(hubPath, '../');
             break
         case 'linux':
             hubRootPath = path.join(hubPath, '../');
