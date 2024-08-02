@@ -48,8 +48,8 @@ jobs:
         with:
           unity_version: ${{ matrix.unity_versions }}
           build_targets: ${{ matrix.build_targets }}
-      - uses: ./ #RageAgainstThePixel/activate-unity-license
+      - uses: xrtk/activate-unity-license
         with:
-          license: Personal
+          license-type: Personal
           username: ${{ secrets.UNITY_USERNAME }}
           password: ${{ secrets.UNITY_PASSWORD }}
