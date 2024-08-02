@@ -28876,7 +28876,7 @@ async function Version() {
 }
 
 async function ShowEntitlements() {
-    await execWithMask([`--show-entitlements`]);
+    await execWithMask([`--showEntitlements`]);
 }
 
 async function ActivateLicense(username, password, serial) {
