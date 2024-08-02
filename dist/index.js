@@ -28838,11 +28838,10 @@ async function CheckExistingLicense() {
     }
     core.info(`ULF Directory: ${ulfDir}`);
     core.info(`Licenses Directory: ${licensesDir}`);
-    // if ulf directory doesn't exist, create it and give it permissions
     if (platform === 'darwin' && !fsSync.existsSync(ulfDir)) {
         core.info(`Creating Unity license directory: ${ulfDir}`);
         await fs.mkdir(ulfDir, { recursive: true });
-        fsSync.chmodSync(ulfDir, 0o777);
+        await fs.chmod(ulfDir, 0o777);
     }
     const ulfPath = path.resolve(ulfDir, 'Unity_lic.ulf');
     core.info(`ULF Path: ${ulfPath}`);
