@@ -1,6 +1,7 @@
 const core = require('@actions/core');
 const exec = require('@actions/exec');
 const fs = require("fs").promises;
+const fsSync = require("fs");
 const path = require('path');
 const platform = process.platform;
 
@@ -76,7 +77,7 @@ async function execWithMask(args) {
         if (client == undefined) {
             client = await getLicensingClient();
         }
-        fs.accessSync(client, fs.constants.X_OK);
+        await fs.access(client, fs.constants.X_OK);
         core.info(`[command]"${client}" ${args.join(' ')}`);
         exitCode = await exec.exec(`"${client}"`, args, {
             silent: true,
@@ -100,22 +101,23 @@ async function execWithMask(args) {
     }
 };
 
-async function hasExistingLicense() {
+const licensePaths = {
+    win32: [
+        path.resolve(process.env.PROGRAMDATA || '', 'Unity'),
+        path.resolve(process.env.LOCALAPPDATA || '', 'Unity', 'licenses')
+    ],
+    darwin: [
+        path.resolve('/Library', 'Application Support', 'Unity') || '/Library/Application Support/Unity',
+        path.resolve('/Library', 'Unity', 'licenses' || '/Library/Unity/licenses')
+    ],
+    linux: [
+        path.resolve(process.env.HOME || '', '.local/share/unity3d/Unity'),
+        path.resolve(process.env.HOME || '', '.config/unity3d/Unity/licenses')
+    ]
+};
+
+async function CheckExistingLicense() {
     core.info('Checking for existing Unity License activation...');
-    const licensePaths = {
-        win32: [
-            path.resolve(process.env.PROGRAMDATA || '', 'Unity'),
-            path.resolve(process.env.LOCALAPPDATA || '', 'Unity', 'licenses')
-        ],
-        darwin: [
-            path.resolve('/Library', 'Application Support', 'Unity') || '/Library/Application Support/Unity',
-            path.resolve('/Library', 'Unity', 'licenses' || '/Library/Unity/licenses')
-        ],
-        linux: [
-            path.resolve(process.env.HOME || '', '.local/share/unity3d/Unity'),
-            path.resolve(process.env.HOME || '', '.config/unity3d/Unity/licenses')
-        ]
-    };
     core.info(`Platform detected: ${platform}`);
     const paths = licensePaths[platform];
     core.info(`License paths: ${paths}`);
@@ -144,6 +146,9 @@ async function hasExistingLicense() {
     try {
         const ulfPath = path.resolve(ulfDir, 'Unity_lic.ulf');
         core.info(`ULF Path: ${ulfPath}`);
+        if (!fsSync.existsSync(ulfPath)) {
+            return false;
+        }
         await fs.access(ulfPath, fs.constants.R_OK);
     } catch (error) {
         return false;
@@ -151,7 +156,7 @@ async function hasExistingLicense() {
     try {
         await fs.access(licensesDir, fs.constants.R_OK);
         core.info(`Found licenses directory: ${licensesDir}`);
-        return fs.readdirSync(licensesDir).some(f => f.endsWith('.xml'));
+        return fsSync.readdirSync(licensesDir).some(f => f.endsWith('.xml'));
     } catch (error) {
         // nothing
     }
@@ -181,4 +186,4 @@ async function returnLicense() {
     await showEntitlements();
 }
 
-module.exports = { hasExistingLicense, version, showEntitlements, activateLicense, returnLicense };
+module.exports = { CheckExistingLicense, version, showEntitlements, activateLicense, returnLicense };

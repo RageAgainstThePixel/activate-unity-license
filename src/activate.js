@@ -7,7 +7,8 @@ const platform = process.platform;
 
 async function Activate() {
     try {
-        if (licenseClient.hasExistingLicense()) {
+        const hasExistingLicense = await licenseClient.CheckExistingLicense();
+        if (hasExistingLicense) {
             core.info('Unity License already activated!');
             return;
         } else {
