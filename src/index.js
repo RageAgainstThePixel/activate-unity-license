@@ -10,6 +10,7 @@ const main = async () => {
     } else {
         await Deactivate();
     }
+    process.exit(0);
 }
 
 main();
