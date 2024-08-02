@@ -1,4 +1,4 @@
-const { ResolveGlobPath } = require('./utility');
+const { ResolveGlobPath, GetEditorRootPath } = require('./utility');
 const core = require('@actions/core');
 const glob = require('@actions/glob');
 const exec = require('@actions/exec');
@@ -35,7 +35,9 @@ async function getLicensingClient() {
         // macOS (Editor versions 2021.3.19f1 or later): <UnityEditorDir>/Contents/Frameworks/UnityLicensingClient.app/Contents/MacOS/
         // macOS (Editor versions earlier than 2021.3.19f1): <UnityEditorDir>/Contents/Frameworks/UnityLicensingClient.app/Contents/Resources/
         // Linux: <UnityEditorDir>/Data/Resources/Licensing/Client/
-        const globPattern = path.join(editorPath, '**', 'Unity.Licensing.Client');
+        const rootEditorPath = await GetEditorRootPath(editorPath);
+        core.info(`Root Editor Path: ${rootEditorPath}`);
+        const globPattern = path.join(rootEditorPath, '**', 'Unity.Licensing.Client');
         licenseClientPath = await ResolveGlobPath(globPattern);
         core.info(`Unity Licensing Client Path: ${licenseClientPath}`);
         await fs.access(licenseClientPath, fs.constants.R_OK);

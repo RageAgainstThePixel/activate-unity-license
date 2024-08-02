@@ -28705,7 +28705,7 @@ module.exports = { Deactivate }
 /***/ 917:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const { ResolveGlobPath } = __nccwpck_require__(4345);
+const { ResolveGlobPath, GetEditorRootPath } = __nccwpck_require__(4345);
 const core = __nccwpck_require__(2186);
 const glob = __nccwpck_require__(8090);
 const exec = __nccwpck_require__(1514);
@@ -28742,7 +28742,9 @@ async function getLicensingClient() {
         // macOS (Editor versions 2021.3.19f1 or later): <UnityEditorDir>/Contents/Frameworks/UnityLicensingClient.app/Contents/MacOS/
         // macOS (Editor versions earlier than 2021.3.19f1): <UnityEditorDir>/Contents/Frameworks/UnityLicensingClient.app/Contents/Resources/
         // Linux: <UnityEditorDir>/Data/Resources/Licensing/Client/
-        const globPattern = path.join(editorPath, '**', 'Unity.Licensing.Client');
+        const rootEditorPath = await GetEditorRootPath(editorPath);
+        core.info(`Root Editor Path: ${rootEditorPath}`);
+        const globPattern = path.join(rootEditorPath, '**', 'Unity.Licensing.Client');
         licenseClientPath = await ResolveGlobPath(globPattern);
         core.info(`Unity Licensing Client Path: ${licenseClientPath}`);
         await fs.access(licenseClientPath, fs.constants.R_OK);
@@ -28895,6 +28897,25 @@ const glob = __nccwpck_require__(8090);
 const fs = (__nccwpck_require__(7147).promises);
 const path = __nccwpck_require__(1017);
 
+async function GetEditorRootPath(editorPath) {
+    core.debug(`searching for editor root path: ${editorPath}`);
+    let editorRootPath = editorPath;
+    switch (process.platform) {
+        case 'darwin':
+            editorRootPath = path.join(editorPath, '../../../../');
+            break;
+        case 'linux':
+            editorRootPath = path.join(editorPath, '../../');
+            break;
+        case 'win32':
+            editorRootPath = path.join(editorPath, '../../');
+            break
+    }
+    await fs.access(editorRootPath, fs.constants.R_OK);
+    core.debug(`found editor root path: ${editorRootPath}`);
+    return editorRootPath;
+}
+
 async function ResolveGlobPath(globPath) {
     try {
         core.info(`globPath: ${globPath}`);
@@ -28915,7 +28936,7 @@ async function ResolveGlobPath(globPath) {
     }
 }
 
-module.exports = { ResolveGlobPath }
+module.exports = { ResolveGlobPath, GetEditorRootPath }
 
 
 /***/ }),
