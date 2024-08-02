@@ -24,6 +24,9 @@ async function GetEditorRootPath(editorPath) {
 
 async function ResolveGlobPath(globPath) {
     try {
+        if (Array.isArray(globPath)) {
+            globPath = path.join(...globPath);
+        }
         core.info(`globPath: ${globPath}`);
         globPath = path.normalize(globPath);
         core.info(`normalized globPath: ${globPath}`);
