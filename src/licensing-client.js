@@ -131,33 +131,38 @@ async function CheckExistingLicense() {
     }
     core.info(`ULF Directory: ${ulfDir}`);
     core.info(`Licenses Directory: ${licensesDir}`);
-    let hasUfl = undefined;
+    // if ulf directory doesn't exist, create it and give it permissions
+    if (platform === 'darwin' && !fsSync.existsSync(ulfDir)) {
+        core.info(`Creating Unity license directory: ${ulfDir}`);
+        await fs.mkdir(ulfDir, { recursive: true });
+        fsSync.chmodSync(ulfDir, 0o777);
+    }
+    const ulfPath = path.resolve(ulfDir, 'Unity_lic.ulf');
+    core.info(`ULF Path: ${ulfPath}`);
+
     try {
-        await fs.access(ulfDir, fs.constants.R_OK);
-    } catch (error) {
-        if (platform === 'darwin') {
-            if (!fsSync.existsSync(ulfDir)) {
-                await fs.mkdir(ulfDir, { recursive: true });
-            }
-            fs.chmod(ulfDir, 0o777);
+        if (fsSync.existsSync(ulfPath)) {
+            core.info(`Found license file at path: ${ulfPath}`);
+            return true;
+        } else {
+            core.info(`License file does not exist at path: ${ulfPath}`);
         }
-    }
-    try {
-        const ulfPath = path.resolve(ulfDir, 'Unity_lic.ulf');
-        core.info(`ULF Path: ${ulfPath}`);
-        await fs.access(ulfPath, fs.constants.R_OK);
-        hasUfl = fsSync.existsSync(ulfPath);
     } catch (error) {
-        return false;
+        core.info(`Error checking ulf path: ${error.message}`);
     }
+
     try {
-        await fs.access(licensesDir, fs.constants.R_OK);
-        core.info(`Found licenses directory: ${licensesDir}`);
-        return fsSync.readdirSync(licensesDir).some(f => f.endsWith('.xml'));
+        if (fsSync.existsSync(licensesDir)) {
+            core.info(`Found licenses directory: ${licensesDir}`);
+            return fsSync.readdirSync(licensesDir).some(f => f.endsWith('.xml'));
+        } else {
+            core.info(`Licenses directory does not exist: ${licensesDir}`);
+        }
     } catch (error) {
-        // nothing
+        core.info(`Error checking licenses directory: ${error.message}`);
     }
-    return hasUfl === true;
+
+    return false;
 }
 
 async function Version() {
@@ -180,7 +185,7 @@ async function ActivateLicense(username, password, serial) {
 
 async function ReturnLicense() {
     await execWithMask([`--return-ulf`]);
-    await showEntitlements();
+    await ShowEntitlements();
 }
 
 module.exports = { CheckExistingLicense, Version, ShowEntitlements, ActivateLicense, ReturnLicense };
