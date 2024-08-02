@@ -1,8 +1,10 @@
 const core = require('@actions/core');
+const glob = require('@actions/glob');
 const exec = require('@actions/exec');
 const fs = require("fs").promises;
 const fsSync = require("fs");
 const path = require('path');
+
 const platform = process.platform;
 
 async function getLicensingClient() {
@@ -16,48 +18,37 @@ async function getLicensingClient() {
     core.info(`Unity Version: ${version}`);
     await fs.access(editorPath, fs.constants.X_OK);
     let licenseClientPath;
-    const [major, minor, patch] = version.split('.');
-    // if 2019.3 or older, use unity hub licensing client
+    const major = version.split('.')[0];
+    // if 2019.3 or older, use unity editor hub licensing client
     if (major < 2020) {
-        switch (platform) {
-            case 'win32':
-                // C:\Program Files\Unity Hub\UnityLicensingClient_V1
-                licenseClientPath = path.resolve(editorPath, 'Unity Hub', 'UnityLicensingClient_V1');
-                break;
-            case 'darwin':
-                // /Applications/Unity\ Hub.app/Contents/MacOS/Unity\ Hub/UnityLicensingClient_V1
-                licenseClientPath = path.resolve(editorPath, 'Unity Hub.app', 'Contents', 'MacOS', 'Unity Hub', 'UnityLicensingClient_V1');
-                break;
-            case 'linux':
-                // ~/Applications/Unity\ Hub.AppImage/UnityLicensingClient_V1
-                licenseClientPath = path.resolve(editorPath, 'Unity Hub.AppImage', 'UnityLicensingClient_V1');
-                break;
-            default:
-                throw Error(`Unsupported platform: ${platform}`);
+        // C:\Program Files\Unity Hub\UnityLicensingClient_V1
+        // /Applications/Unity\ Hub.app/Contents/MacOS/Unity\ Hub/UnityLicensingClient_V1
+        // ~/Applications/Unity\ Hub.AppImage/UnityLicensingClient_V1
+        const globPattern = path.resolve('**', 'Unity Hub*', 'UnityLicensingClient_V1');
+        const globber = await glob.create(globPattern);
+        const files = await globber.glob();
+        if (files.length > 0) {
+            licenseClientPath = files[0];
+        } else {
+            throw Error(`Failed to find Unity Licensing Client in Unity Hub directory!\n "${globPattern}"`);
         }
+        core.info(`Unity Licensing Client Path: ${licenseClientPath}`);
+        await fs.access(licenseClientPath, fs.constants.X_OK);
         return licenseClientPath;
     }
-    switch (platform) {
-        case 'win32':
-            licenseClientPath = path.resolve(editorPath, 'Data', 'Resources', 'Licensing', 'Client', "Unity.Licensing.Client.exe");
-            break;
-        case 'darwin':
-            const isOlderThan2021_3_19 = major < 2021 || (major == 2021 && minor < 3) || (major == 2021 && minor == 3 && patch < 19);
-            if (isOlderThan2021_3_19) {
-                licenseClientPath = path.resolve(editorPath, 'Frameworks', 'UnityLicensingClient.app', 'Contents', 'Resources', 'Unity.Licensing.Client');
-            } else {
-                licenseClientPath = path.resolve(editorPath, 'Frameworks', 'UnityLicensingClient.app', 'Contents', 'MacOS', 'Unity.Licensing.Client');
-            }
-            break;
-        case 'linux':
-            licenseClientPath = path.resolve(editorPath, 'Data', 'Resources', 'Licensing', 'Client', "Unity.Licensing.Client");
-            break;
-        default:
-            throw Error(`Unsupported platform: ${platform}`);
+    else {
+        const globPattern = path.resolve(editorPath, '**', 'Unity.Licensing.Client');
+        const globber = await glob.create(globPattern);
+        const files = await globber.glob();
+        if (files.length > 0) {
+            licenseClientPath = files[0];
+        } else {
+            throw Error(`Unity Licensing Client not found in ${editorPath}\n  "${globPattern}"`);
+        }
+        core.info(`Unity Licensing Client Path: ${licenseClientPath}`);
+        await fs.access(licenseClientPath, fs.constants.X_OK);
+        return licenseClientPath;
     }
-    core.info(`Unity Licensing Client Path: ${licenseClientPath}`);
-    await fs.access(licenseClientPath, fs.constants.X_OK);
-    return licenseClientPath;
 };
 
 function maskSerialInOutput(output) {
@@ -68,7 +59,7 @@ function maskSerialInOutput(output) {
     });
 };
 
-const client = undefined;
+let client = undefined;
 
 async function execWithMask(args) {
     let output = '';
@@ -136,20 +127,22 @@ async function CheckExistingLicense() {
     }
     core.info(`ULF Directory: ${ulfDir}`);
     core.info(`Licenses Directory: ${licensesDir}`);
+    let hasUfl = undefined;
     try {
-        await fs.access(ulfDir, fs.constants.X_OK);
+        await fs.access(ulfDir, fs.constants.R_OK);
     } catch (error) {
-        await fs.mkdir(ulfDir, { recursive: true });
-        fs.chmod(ulfDir, 0o777);
+        if (platform === 'darwin') {
+            if (!fsSync.existsSync(ulfDir)) {
+                await fs.mkdir(ulfDir, { recursive: true });
+            }
+            fs.chmod(ulfDir, 0o777);
+        }
     }
-    await fs.access(ulfDir, fs.constants.X_OK);
     try {
         const ulfPath = path.resolve(ulfDir, 'Unity_lic.ulf');
         core.info(`ULF Path: ${ulfPath}`);
-        if (!fsSync.existsSync(ulfPath)) {
-            return false;
-        }
         await fs.access(ulfPath, fs.constants.R_OK);
+        hasUfl = fsSync.existsSync(ulfPath);
     } catch (error) {
         return false;
     }
@@ -160,7 +153,7 @@ async function CheckExistingLicense() {
     } catch (error) {
         // nothing
     }
-    return false;
+    return hasUfl === true;
 }
 
 async function version() {
