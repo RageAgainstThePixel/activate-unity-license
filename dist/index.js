@@ -28705,6 +28705,7 @@ module.exports = { Deactivate }
 /***/ 917:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
+const { ResolveGlobPath } = __nccwpck_require__(4345);
 const core = __nccwpck_require__(2186);
 const glob = __nccwpck_require__(8090);
 const exec = __nccwpck_require__(1514);
@@ -28715,7 +28716,7 @@ const path = __nccwpck_require__(1017);
 const platform = process.platform;
 
 async function getLicensingClient() {
-    const editorPath = platform !== 'darwin' ? path.resolve(process.env.UNITY_EDITOR_PATH, '..') : path.resolve(process.env.UNITY_EDITOR_PATH, '..', '..');
+    const editorPath = platform !== 'darwin' ? path.join(process.env.UNITY_EDITOR_PATH, '..') : path.join(process.env.UNITY_EDITOR_PATH, '..', '..');
     const version = process.env.UNITY_EDITOR_VERSION || editorPath.match(/(\d+\.\d+\.\d+[a-z]?\d?)/)[0];
     core.info(`Unity Editor Path: ${editorPath}`);
     core.info(`Unity Version: ${version}`);
@@ -28730,15 +28731,8 @@ async function getLicensingClient() {
         // C:\Program Files\Unity Hub\UnityLicensingClient_V1
         // /Applications/Unity\ Hub.app/Contents/MacOS/Unity\ Hub/UnityLicensingClient_V1
         // ~/Applications/Unity\ Hub.AppImage/UnityLicensingClient_V1
-        const globPattern = path.resolve(unityHubPath, '..', '**', 'UnityLicensingClient_V1');
-        core.info(`Unity Licensing Client Glob Pattern: ${globPattern}`);
-        const globber = await glob.create(globPattern);
-        const files = await globber.glob();
-        if (files.length > 0) {
-            licenseClientPath = files[0];
-        } else {
-            throw Error(`Failed to find Unity Licensing Client in Unity Hub directory!\n"${globPattern}"`);
-        }
+        const globPattern = path.join(unityHubPath, '..', '**', 'UnityLicensingClient_V1');
+        licenseClientPath = await ResolveGlobPath(globPattern);
         core.info(`Unity Licensing Client Path: ${licenseClientPath}`);
         await fs.access(licenseClientPath, fs.constants.R_OK);
         return licenseClientPath;
@@ -28748,14 +28742,8 @@ async function getLicensingClient() {
         // macOS (Editor versions 2021.3.19f1 or later): <UnityEditorDir>/Contents/Frameworks/UnityLicensingClient.app/Contents/MacOS/
         // macOS (Editor versions earlier than 2021.3.19f1): <UnityEditorDir>/Contents/Frameworks/UnityLicensingClient.app/Contents/Resources/
         // Linux: <UnityEditorDir>/Data/Resources/Licensing/Client/
-        const globPattern = path.resolve(editorPath, '**', 'Unity.Licensing.Client');
-        const globber = await glob.create(globPattern);
-        const files = await globber.glob();
-        if (files.length > 0) {
-            licenseClientPath = files[0];
-        } else {
-            throw Error(`Unity Licensing Client not found in ${editorPath}\n  "${globPattern}"`);
-        }
+        const globPattern = path.join(editorPath, '**', 'Unity.Licensing.Client');
+        licenseClientPath = await ResolveGlobPath(globPattern);
         core.info(`Unity Licensing Client Path: ${licenseClientPath}`);
         await fs.access(licenseClientPath, fs.constants.R_OK);
         return licenseClientPath;
@@ -28805,16 +28793,16 @@ async function execWithMask(args) {
 
 const licensePaths = {
     win32: [
-        path.resolve(process.env.PROGRAMDATA || '', 'Unity'),
-        path.resolve(process.env.LOCALAPPDATA || '', 'Unity', 'licenses')
+        path.join(process.env.PROGRAMDATA || '', 'Unity'),
+        path.join(process.env.LOCALAPPDATA || '', 'Unity', 'licenses')
     ],
     darwin: [
-        path.resolve('/Library', 'Application Support', 'Unity') || '/Library/Application Support/Unity',
-        path.resolve('/Library', 'Unity', 'licenses' || 0)
+        path.join('/Library', 'Application Support', 'Unity') || '/Library/Application Support/Unity',
+        path.join('/Library', 'Unity', 'licenses' || 0)
     ],
     linux: [
-        path.resolve(process.env.HOME || '', '.local/share/unity3d/Unity'),
-        path.resolve(process.env.HOME || '', '.config/unity3d/Unity/licenses')
+        path.join(process.env.HOME || '', '.local/share/unity3d/Unity'),
+        path.join(process.env.HOME || '', '.config/unity3d/Unity/licenses')
     ]
 };
 
@@ -28843,7 +28831,7 @@ async function CheckExistingLicense() {
         await fs.mkdir(ulfDir, { recursive: true });
         await fs.chmod(ulfDir, 0o777);
     }
-    const ulfPath = path.resolve(ulfDir, 'Unity_lic.ulf');
+    const ulfPath = path.join(ulfDir, 'Unity_lic.ulf');
     core.info(`ULF Path: ${ulfPath}`);
 
     try {
@@ -28895,6 +28883,39 @@ async function ReturnLicense() {
 }
 
 module.exports = { CheckExistingLicense, Version, ShowEntitlements, ActivateLicense, ReturnLicense };
+
+
+/***/ }),
+
+/***/ 4345:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const core = __nccwpck_require__(2186);
+const glob = __nccwpck_require__(8090);
+const fs = (__nccwpck_require__(7147).promises);
+const path = __nccwpck_require__(1017);
+
+async function ResolveGlobPath(globPath) {
+    try {
+        core.debug(`globPath: ${globPath}`);
+        globPath = path.normalize(globPath);
+        core.debug(`normalized globPath: ${globPath}`);
+        const globber = await glob.create(globPath);
+        const globPaths = await globber.glob();
+        core.debug(`globPaths: ${globPaths}`);
+        const result = globPaths[0];
+        if (!result || globPaths.length === 0) {
+            throw new Error(`Failed to resolve ${globPath}\n  > ${globPaths}`);
+        }
+        await fs.access(result, fs.constants.R_OK);
+        core.debug(`result:\n  > "${result}"`);
+        return result;
+    } catch (error) {
+        throw error;
+    }
+}
+
+module.exports = { ResolveGlobPath }
 
 
 /***/ }),
