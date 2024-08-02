@@ -13,7 +13,7 @@ inputs:
     description: 'Unity Serial (Only used for Professional license type)'
     required: false
     default: ''
-  license-type:
+  license:
     description: 'License type to activate (professional or personal)'
     required: false
     default: 'Personal'

@@ -38,7 +38,7 @@ This action requires several secrets that need to be setup in the repository or 
 
 | name | description | required |
 | ---- | ----------- | -------- |
-| license | Must be one of `Personal` or `Professional` | true |
+| license | Must be one of `Personal` or `Professional` | Defaults to `Personal` |
 | username | The email address you use for your Unity Id | true |
 | password | The password you use for Unity Id access | true |
 | serial | Unity Serial License | Required for `Professional` license activations |
