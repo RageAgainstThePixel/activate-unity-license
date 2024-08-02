@@ -28705,7 +28705,7 @@ module.exports = { Deactivate }
 /***/ 917:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const { ResolveGlobPath, GetEditorRootPath } = __nccwpck_require__(4345);
+const { ResolveGlobPath, GetEditorRootPath, GetHubRootPath } = __nccwpck_require__(4345);
 const core = __nccwpck_require__(2186);
 const glob = __nccwpck_require__(8090);
 const exec = __nccwpck_require__(1514);
@@ -28731,7 +28731,8 @@ async function getLicensingClient() {
         // C:\Program Files\Unity Hub\UnityLicensingClient_V1
         // /Applications/Unity\ Hub.app/Contents/MacOS/Unity\ Hub/UnityLicensingClient_V1
         // ~/Applications/Unity\ Hub.AppImage/UnityLicensingClient_V1
-        const globs = [unityHubPath, '**', 'Unity.Licensing.Client'];
+        const rootHubPath = await GetHubRootPath(unityHubPath);
+        const globs = [rootHubPath, '**', 'Unity.Licensing.Client'];
         if (platform === 'win32') {
             globs.push('.exe');
         }
@@ -28903,6 +28904,22 @@ const glob = __nccwpck_require__(8090);
 const fs = (__nccwpck_require__(7147).promises);
 const path = __nccwpck_require__(1017);
 
+async function GetHubRootPath(hubPath) {
+    core.debug(`searching for hub root path: ${hubPath}`);
+    let hubRootPath = hubPath;
+    switch (process.platform) {
+        case 'darwin':
+            hubRootPath = path.join(hubPath, '../../../../');
+            break;
+        case 'linux':
+            hubRootPath = path.join(hubPath, '../../');
+            break;
+        case 'win32':
+            hubRootPath = path.join(hubPath, '../../');
+            break
+    }
+}
+
 async function GetEditorRootPath(editorPath) {
     core.debug(`searching for editor root path: ${editorPath}`);
     let editorRootPath = editorPath;
@@ -28945,7 +28962,7 @@ async function ResolveGlobPath(globPath) {
     }
 }
 
-module.exports = { ResolveGlobPath, GetEditorRootPath }
+module.exports = { ResolveGlobPath, GetEditorRootPath, GetHubRootPath }
 
 
 /***/ }),

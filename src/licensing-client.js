@@ -1,4 +1,4 @@
-const { ResolveGlobPath, GetEditorRootPath } = require('./utility');
+const { ResolveGlobPath, GetEditorRootPath, GetHubRootPath } = require('./utility');
 const core = require('@actions/core');
 const glob = require('@actions/glob');
 const exec = require('@actions/exec');
@@ -24,7 +24,8 @@ async function getLicensingClient() {
         // C:\Program Files\Unity Hub\UnityLicensingClient_V1
         // /Applications/Unity\ Hub.app/Contents/MacOS/Unity\ Hub/UnityLicensingClient_V1
         // ~/Applications/Unity\ Hub.AppImage/UnityLicensingClient_V1
-        const globs = [unityHubPath, '**', 'Unity.Licensing.Client'];
+        const rootHubPath = await GetHubRootPath(unityHubPath);
+        const globs = [rootHubPath, '**', 'Unity.Licensing.Client'];
         if (platform === 'win32') {
             globs.push('.exe');
         }
