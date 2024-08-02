@@ -28715,10 +28715,6 @@ const path = __nccwpck_require__(1017);
 const platform = process.platform;
 
 async function getLicensingClient() {
-    // Windows: <UnityEditorDir>\Data\Resources\Licensing\Client
-    // macOS (Editor versions 2021.3.19f1 or later): <UnityEditorDir>/Contents/Frameworks/UnityLicensingClient.app/Contents/MacOS/
-    // macOS (Editor versions earlier than 2021.3.19f1): <UnityEditorDir>/Contents/Frameworks/UnityLicensingClient.app/Contents/Resources/
-    // Linux: <UnityEditorDir>/Data/Resources/Licensing/Client
     const editorPath = platform !== 'darwin' ? path.resolve(process.env.UNITY_EDITOR_PATH, '..') : path.resolve(process.env.UNITY_EDITOR_PATH, '..', '..');
     const version = process.env.UNITY_EDITOR_VERSION || editorPath.match(/(\d+\.\d+\.\d+[a-z]?\d?)/)[0];
     core.info(`Unity Editor Path: ${editorPath}`);
@@ -28738,17 +28734,20 @@ async function getLicensingClient() {
         core.info(`Unity Licensing Client Glob Pattern: ${globPattern}`);
         const globber = await glob.create(globPattern);
         const files = await globber.glob();
-        core.info(`Unity Licensing Client Files: ${files}`);
         if (files.length > 0) {
             licenseClientPath = files[0];
         } else {
             throw Error(`Failed to find Unity Licensing Client in Unity Hub directory!\n"${globPattern}"`);
         }
         core.info(`Unity Licensing Client Path: ${licenseClientPath}`);
-        await fs.access(licenseClientPath, fs.constants.X_OK);
+        await fs.access(licenseClientPath, fs.constants.R_OK);
         return licenseClientPath;
     }
     else {
+        // Windows: <UnityEditorDir>\Data\Resources\Licensing\Client
+        // macOS (Editor versions 2021.3.19f1 or later): <UnityEditorDir>/Contents/Frameworks/UnityLicensingClient.app/Contents/MacOS/
+        // macOS (Editor versions earlier than 2021.3.19f1): <UnityEditorDir>/Contents/Frameworks/UnityLicensingClient.app/Contents/Resources/
+        // Linux: <UnityEditorDir>/Data/Resources/Licensing/Client/
         const globPattern = path.resolve(editorPath, '**', 'Unity.Licensing.Client');
         const globber = await glob.create(globPattern);
         const files = await globber.glob();
@@ -28758,7 +28757,7 @@ async function getLicensingClient() {
             throw Error(`Unity Licensing Client not found in ${editorPath}\n  "${globPattern}"`);
         }
         core.info(`Unity Licensing Client Path: ${licenseClientPath}`);
-        await fs.access(licenseClientPath, fs.constants.X_OK);
+        await fs.access(licenseClientPath, fs.constants.R_OK);
         return licenseClientPath;
     }
 };
