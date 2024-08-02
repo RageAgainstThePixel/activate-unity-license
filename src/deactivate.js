@@ -3,10 +3,11 @@ const core = require('@actions/core');
 
 async function Deactivate() {
     try {
-        if (await licensingClient.hasExistingLicense()) {
+        const isActive = await licensingClient.CheckExistingLicense();
+        if (isActive) {
             core.startGroup(`Unity License Deactivation...`);
             try {
-                await licensingClient.returnLicense();
+                await licensingClient.ReturnLicense();
             }
             finally {
                 core.endGroup();

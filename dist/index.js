@@ -28603,8 +28603,8 @@ const platform = process.platform;
 
 async function Activate() {
     try {
-        let hasLicense = await licenseClient.CheckExistingLicense();
-        if (hasLicense) {
+        let isActive = await licenseClient.CheckExistingLicense();
+        if (isActive) {
             core.info('Unity License already activated!');
             return;
         } else {
@@ -28620,11 +28620,11 @@ async function Activate() {
         const password = core.getInput('password', { required: true });
         const serial = core.getInput('serial', { required: licenseType.toLowerCase().startsWith('pro') });
         await licenseClient.ActivateLicense(username, password, serial);
-        core.saveState('isPost', true);
-        hasLicense = await licenseClient.CheckExistingLicense();
-        if (!hasLicense) {
+        isActive = await licenseClient.CheckExistingLicense();
+        if (!isActive) {
             throw Error('Unable to find Unity License!');
         }
+        core.saveState('isPost', true);
         await licenseClient.ShowEntitlements();
     } catch (error) {
         core.setFailed(`Unity License Activation Failed!\n::error::${error}`);
@@ -28679,10 +28679,11 @@ const core = __nccwpck_require__(2186);
 
 async function Deactivate() {
     try {
-        if (await licensingClient.hasExistingLicense()) {
+        const isActive = await licensingClient.CheckExistingLicense();
+        if (isActive) {
             core.startGroup(`Unity License Deactivation...`);
             try {
-                await licensingClient.returnLicense();
+                await licensingClient.ReturnLicense();
             }
             finally {
                 core.endGroup();
