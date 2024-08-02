@@ -17,6 +17,7 @@ async function GetHubRootPath(hubPath) {
             hubRootPath = path.join(hubPath, '../');
             break;
     }
+    return hubRootPath;
 }
 
 async function GetEditorRootPath(editorPath) {
