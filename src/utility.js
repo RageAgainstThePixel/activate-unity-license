@@ -10,12 +10,12 @@ async function GetHubRootPath(hubPath) {
         case 'darwin':
             hubRootPath = path.join(hubPath, '../../../../');
             break;
-        case 'linux':
-            hubRootPath = path.join(hubPath, '../../');
-            break;
         case 'win32':
             hubRootPath = path.join(hubPath, '../../');
             break
+        case 'linux':
+            hubRootPath = path.join(hubPath, '../');
+            break;
     }
 }
 
@@ -26,12 +26,12 @@ async function GetEditorRootPath(editorPath) {
         case 'darwin':
             editorRootPath = path.join(editorPath, '../../../../');
             break;
-        case 'linux':
-            editorRootPath = path.join(editorPath, '../../');
-            break;
         case 'win32':
             editorRootPath = path.join(editorPath, '../../');
             break
+        case 'linux':
+            editorRootPath = path.join(editorPath, '../../');
+            break;
     }
     await fs.access(editorRootPath, fs.constants.R_OK);
     core.debug(`found editor root path: ${editorRootPath}`);

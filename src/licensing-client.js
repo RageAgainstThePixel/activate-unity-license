@@ -25,9 +25,11 @@ async function getLicensingClient() {
         // /Applications/Unity\ Hub.app/Contents/MacOS/Unity\ Hub/UnityLicensingClient_V1
         // ~/Applications/Unity\ Hub.AppImage/UnityLicensingClient_V1
         const rootHubPath = await GetHubRootPath(unityHubPath);
-        const globs = [rootHubPath, '**', 'Unity.Licensing.Client'];
+        const globs = [rootHubPath, '**'];
         if (platform === 'win32') {
-            globs.push('.exe');
+            globs.push('Unity.Licensing.Client.exe');
+        } else {
+            globs.push('UnityLicensingClient');
         }
         licenseClientPath = await ResolveGlobPath(globs);
         core.info(`Unity Licensing Client Path: ${licenseClientPath}`);
@@ -41,9 +43,11 @@ async function getLicensingClient() {
         // Linux: <UnityEditorDir>/Data/Resources/Licensing/Client/
         const rootEditorPath = await GetEditorRootPath(editorPath);
         core.info(`Root Editor Path: ${rootEditorPath}`);
-        const globs = [rootEditorPath, '**', 'Unity.Licensing.Client'];
+        const globs = [rootEditorPath, '**'];
         if (platform === 'win32') {
-            globs.push('.exe');
+            globs.push('Unity.Licensing.Client.exe');
+        } else {
+            globs.push('UnityLicensingClient');
         }
         licenseClientPath = await ResolveGlobPath(globs);
         core.info(`Unity Licensing Client Path: ${licenseClientPath}`);
