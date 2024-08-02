@@ -1,8 +1,23 @@
-name: <github-action>
+name: activate-unity-license
 description: 'A GitHub Actions template repository for JavaScript based Actions'
-# inputs:
-# outputs:
+inputs:
+  username:
+    description: 'Unity Username'
+    required: true
+    default: ''
+  password:
+    description: 'Unity Password'
+    required: true
+    default: ''
+  serial:
+    description: 'Unity Serial (Only used for Professional license type)'
+    required: false
+    default: ''
+  license-type:
+    description: 'License type to activate (professional or personal)'
+    required: false
+    default: 'Personal'
 runs:
   using: 'node20'
   main: 'dist/index.js'
-  #post: 'dist/index.js'
+  post: 'dist/index.js'

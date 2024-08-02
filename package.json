@@ -1,21 +1,29 @@
 {
-  "name": "<github-action>",
+  "name": "activate-unity-license",
   "version": "1.0.0",
-  "description": "A GitHub Actions template repository for JavaScript based Actions",
+  "description": "A GitHub action to activate a Unity Game Engine license",
   "author": "RageAgainstThePixel",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/RageAgainstThePixel/<github-action>.git"
+    "url": "git+https://github.com/RageAgainstThePixel/activate-unity-license.git"
   },
   "bugs": {
-    "url": "https://github.com/RageAgainstThePixel/<github-action>/issues"
+    "url": "https://github.com/RageAgainstThePixel/activate-unity-license/issues"
   },
-  "homepage": "https://github.com/RageAgainstThePixel/<github-action>",
+  "homepage": "https://github.com/RageAgainstThePixel/activate-unity-license",
   "main": "dist/index.js",
-  "keywords": [],
+  "keywords": [
+    "unity",
+    "license",
+    "activation",
+    "github",
+    "action"
+  ],
   "dependencies": {
-    "@actions/core": "^1.10.1"
+    "@actions/core": "^1.10.0",
+    "@actions/exec": "^1.1.1",
+    "@actions/github": "^5.1.1"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.34.0"
