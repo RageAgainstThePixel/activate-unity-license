@@ -14,10 +14,10 @@ concurrency:
 jobs:
   validate:
     env:
-      UNITY_EDITORS: '' # set by the setup-unity action
-      UNITY_HUB_PATH: '' # set by the setup-unity action
-      UNITY_EDITOR_PATH: '' # set by the setup-unity action
-      UNITY_PROJECT_PATH: '' # set by the setup-unity action
+      UNITY_EDITORS: '' # set by the unity-setup action
+      UNITY_HUB_PATH: '' # set by the unity-setup action
+      UNITY_EDITOR_PATH: '' # set by the unity-setup action
+      UNITY_PROJECT_PATH: '' # set by the unity-setup action
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -44,7 +44,7 @@ jobs:
         with:
           repository: RageAgainstThePixel/com.utilities.buildpipeine
           path: com.utilities.buildpipline
-      - uses: RageAgainstThePixel/setup-unity@development
+      - uses: RageAgainstThePixel/unity-setup@development
         with:
           unity_version: ${{ matrix.unity_versions }}
           build_targets: ${{ matrix.build_targets }}
