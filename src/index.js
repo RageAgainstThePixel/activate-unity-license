@@ -1,17 +1,16 @@
 const core = require('@actions/core');
+const { Activate } = require('./activate');
+const { Deactivate } = require('./deactivate');
 
-const IS_POST = !!core.getState('isPost');
+const IsPost = !!core.getState('isPost');
 
 const main = async () => {
-    try {
-        if (!IS_POST) {
-            core.info('Hello World!');
-        } else {
-            core.info('Hello World! (post)');
-        }
-    } catch (error) {
-        core.setFailed(error);
+    if (!IsPost) {
+        await Activate();
+    } else {
+        await Deactivate();
     }
+    process.exit(0);
 }
 
 main();
