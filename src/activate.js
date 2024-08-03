@@ -15,26 +15,31 @@ async function Activate() {
             core.startGroup('Attempting to activate Unity License...');
             await licenseClient.Version();
         }
-        const editorPath = process.env.UNITY_EDITOR_PATH;
-        if (!editorPath) {
-            throw Error("Missing UNITY_EDITOR_PATH!");
+        try {
+            const editorPath = process.env.UNITY_EDITOR_PATH;
+            if (!editorPath) {
+                throw Error("Missing UNITY_EDITOR_PATH!");
+            }
+            const licenseType = core.getInput('license', { required: true });
+            const username = core.getInput('username', { required: true });
+            const password = core.getInput('password', { required: true });
+            const serial = core.getInput('serial', { required: licenseType.toLowerCase().startsWith('pro') });
+            await licenseClient.ActivateLicense(username, password, serial);
+            isActive = await licenseClient.CheckExistingLicense();
+            if (!isActive) {
+                throw Error('Unable to find Unity License!');
+            }
+            core.saveState('isPost', true);
+            await licenseClient.ShowEntitlements();
+        } finally {
+            core.endGroup();
         }
-        const licenseType = core.getInput('license', { required: true });
-        const username = core.getInput('username', { required: true });
-        const password = core.getInput('password', { required: true });
-        const serial = core.getInput('serial', { required: licenseType.toLowerCase().startsWith('pro') });
-        await licenseClient.ActivateLicense(username, password, serial);
-        isActive = await licenseClient.CheckExistingLicense();
-        if (!isActive) {
-            throw Error('Unable to find Unity License!');
-        }
-        core.saveState('isPost', true);
-        await licenseClient.ShowEntitlements();
     } catch (error) {
         core.setFailed(`Unity License Activation Failed!\n::error::${error}`);
         copyLogs();
         process.exit(1);
     }
+    core.info('Unity License Activated!');
 }
 
 const licenseLogs = {

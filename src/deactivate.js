@@ -11,6 +11,7 @@ async function Deactivate() {
             }
             finally {
                 core.endGroup();
+                core.info('Unity License successfully returned.');
             }
         } else {
             console.info(`No Unity License was activated.`);

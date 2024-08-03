@@ -44,18 +44,18 @@ async function ResolveGlobPath(globPath) {
         if (Array.isArray(globPath)) {
             globPath = path.join(...globPath);
         }
-        core.info(`globPath: ${globPath}`);
+        core.debug(`globPath: ${globPath}`);
         globPath = path.normalize(globPath);
-        core.info(`normalized globPath: ${globPath}`);
+        core.debug(`normalized globPath: ${globPath}`);
         const globber = await glob.create(globPath);
         const globPaths = await globber.glob();
-        core.info(`globPaths: ${globPaths}`);
+        core.debug(`globPaths: ${globPaths}`);
         const result = globPaths[0];
         if (!result || globPaths.length === 0) {
             throw new Error(`Failed to resolve ${globPath}\n  > ${globPaths}`);
         }
         await fs.access(result, fs.constants.R_OK);
-        core.info(`result:\n  > "${result}"`);
+        core.debug(`result:\n  > "${result}"`);
         return result;
     } catch (error) {
         throw error;
