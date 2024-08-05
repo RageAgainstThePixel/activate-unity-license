@@ -17,7 +17,7 @@ async function Deactivate() {
             console.info(`No Unity License was activated.`);
         }
     } catch (error) {
-        core.setFailed(`Failed to deactivate license!\n::error::${error}`);
+        core.setFailed(`Failed to deactivate license!\n${error}`);
         process.exit(1);
     }
 };

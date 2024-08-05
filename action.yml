@@ -1,22 +1,26 @@
 name: activate-unity-license
 description: 'A GitHub Actions template repository for JavaScript based Actions'
 inputs:
+  license:
+    description: 'Must be one of `Personal`, `Professional`, `Floating`.'
+    required: false
+    default: 'Personal'
   username:
-    description: 'Unity Username'
+    description: 'The email address you use for your Unity Id. Required for `Personal` and `Professional` license activations.'
     required: true
     default: ''
   password:
-    description: 'Unity Password'
+    description: 'The password you use for Unity Id access. Required for `Personal` and `Professional` license activations.'
     required: true
     default: ''
   serial:
-    description: 'Unity Serial (Only used for Professional license type)'
+    description: 'The Serial number for the seat. Required for Professional license activations.'
     required: false
     default: ''
-  license:
-    description: 'License type to activate (professional or personal)'
+  configuration:
+    description: 'Unity License Client `services-config.json` encoded base base64 string. Required for `Floating` license activations.'
     required: false
-    default: 'Personal'
+    default: ''
 runs:
   using: 'node20'
   main: 'dist/index.js'
