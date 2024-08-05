@@ -28914,7 +28914,7 @@ async function ShowEntitlements() {
 async function ActivateLicense(username, password, serial) {
     let args = [`--activate-ulf`, `--username`, username, `--password`, password];
     if (serial !== undefined && serial.length > 0) {
-        args.push([`--serial`, serial]);
+        args.push([`--serial`, `"${serial}"`]);
         const maskedSerial = serial.slice(0, -4) + `XXXX`;
         core.setSecret(maskedSerial);
     }
