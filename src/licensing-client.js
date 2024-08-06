@@ -7,18 +7,18 @@ const path = require('path');
 let client = undefined;
 
 async function getLicensingClient() {
-    core.debug('Getting Licensing Client...');
+    core.info('Getting Licensing Client...');
     const editorPath = process.env.UNITY_EDITOR_PATH;
     const version = process.env.UNITY_EDITOR_VERSION || editorPath.match(/(\d+\.\d+\.\d+[a-z]?\d?)/)[0];
-    core.debug(`Unity Editor Path: ${editorPath}`);
-    core.debug(`Unity Version: ${version}`);
+    core.info(`Unity Editor Path: ${editorPath}`);
+    core.info(`Unity Version: ${version}`);
     await fs.access(editorPath, fs.constants.X_OK);
     let licenseClientPath;
     const major = version.split('.')[0];
     // if 2019.3 or older, use unity hub licensing client
     if (major < 2020) {
         const unityHubPath = process.env.UNITY_HUB_PATH || process.env.HOME;
-        core.debug(`Unity Hub Path: ${unityHubPath}`);
+        core.info(`Unity Hub Path: ${unityHubPath}`);
         await fs.access(unityHubPath, fs.constants.R_OK);
         // C:\Program Files\Unity Hub\UnityLicensingClient_V1
         // /Applications/Unity\ Hub.app/Contents/MacOS/Unity\ Hub/UnityLicensingClient_V1
@@ -54,8 +54,9 @@ async function getLicensingClient() {
                 globs.push('Data', 'Resources', 'Licensing', 'Client', 'Unity.Licensing.Client');
         }
         try {
-            licenseClientPath = path.join(...globs);
-            await fs.access(licenseClientPath, fs.constants.X_OK);
+            licenseClientPath = path.resolve(...globs);
+            core.info(`Testing Unity Licensing Client Path: ${licenseClientPath}`);
+            await fs.access(licenseClientPath, fs.constants.R_OK);
         } catch (error) {
             licenseClientPath = await ResolveGlobPath(globs);
         }
@@ -69,6 +70,9 @@ async function execWithMask(args) {
     try {
         if (!client) {
             client = await getLicensingClient();
+        }
+        if (!client) {
+            throw Error('Failed to find Licensing Client!');
         }
         await fs.access(client, fs.constants.X_OK);
     } catch (error) {
