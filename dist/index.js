@@ -28598,6 +28598,7 @@ const licenseClient = __nccwpck_require__(917);
 const core = __nccwpck_require__(2186);
 
 async function Activate() {
+    let license = undefined;
     try {
         core.saveState('isPost', true);
         await licenseClient.Version();
@@ -28610,7 +28611,7 @@ async function Activate() {
         if (!editorPath) {
             throw Error("Missing UNITY_EDITOR_PATH!");
         }
-        const license = core.getInput('license', { required: true });
+        license = core.getInput('license', { required: true });
         switch (license.toLowerCase()) {
             case 'professional':
             case 'personal':
@@ -28650,7 +28651,7 @@ async function Activate() {
         core.setFailed(`Unity License Activation Failed!\n${error}`);
         process.exit(1);
     }
-    core.info('Unity License Activated!');
+    core.info(`Unity ${license} License Activated!`);
 }
 
 module.exports = { Activate };
@@ -28668,9 +28669,13 @@ async function Deactivate() {
     try {
         const isActive = await licensingClient.CheckExistingLicense();
         if (isActive) {
+            let license = undefined;
             core.startGroup(`Unity License Deactivation...`);
             try {
-                const license = core.getState('license');
+                license = core.getState('license');
+                if (!license) {
+                    throw Error(`Failed to get post license state!`);
+                }
                 core.debug(`post state: ${license}`);
                 if (license.startsWith('f')) {
                     return;
@@ -28684,8 +28689,8 @@ async function Deactivate() {
             }
             finally {
                 core.endGroup();
-                core.info('Unity License successfully returned.');
             }
+            core.info(`Unity ${license} License successfully returned.`);
         } else {
             console.info(`No Unity License was activated.`);
         }

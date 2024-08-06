@@ -2,6 +2,7 @@ const licenseClient = require('./licensing-client');
 const core = require('@actions/core');
 
 async function Activate() {
+    let license = undefined;
     try {
         core.saveState('isPost', true);
         await licenseClient.Version();
@@ -14,7 +15,7 @@ async function Activate() {
         if (!editorPath) {
             throw Error("Missing UNITY_EDITOR_PATH!");
         }
-        const license = core.getInput('license', { required: true });
+        license = core.getInput('license', { required: true });
         switch (license.toLowerCase()) {
             case 'professional':
             case 'personal':
@@ -54,7 +55,7 @@ async function Activate() {
         core.setFailed(`Unity License Activation Failed!\n${error}`);
         process.exit(1);
     }
-    core.info('Unity License Activated!');
+    core.info(`Unity ${license} License Activated!`);
 }
 
 module.exports = { Activate };

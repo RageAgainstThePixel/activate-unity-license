@@ -5,9 +5,13 @@ async function Deactivate() {
     try {
         const isActive = await licensingClient.CheckExistingLicense();
         if (isActive) {
+            let license = undefined;
             core.startGroup(`Unity License Deactivation...`);
             try {
-                const license = core.getState('license');
+                license = core.getState('license');
+                if (!license) {
+                    throw Error(`Failed to get post license state!`);
+                }
                 core.debug(`post state: ${license}`);
                 if (license.startsWith('f')) {
                     return;
@@ -21,8 +25,8 @@ async function Deactivate() {
             }
             finally {
                 core.endGroup();
-                core.info('Unity License successfully returned.');
             }
+            core.info(`Unity ${license} License successfully returned.`);
         } else {
             console.info(`No Unity License was activated.`);
         }
