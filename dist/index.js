@@ -28601,36 +28601,39 @@ async function Activate() {
     try {
         core.startGroup('Attempting to activate Unity License...');
         await licenseClient.Version();
+        let activeLicenses = [];
         let isActive = await licenseClient.CheckExistingLicense();
         if (isActive) {
-            core.info('Unity License already activated!');
-            await licenseClient.ShowEntitlements();
-            return;
-        } else {
-            try {
-                const editorPath = process.env.UNITY_EDITOR_PATH;
-                if (!editorPath) {
-                    throw Error("Missing UNITY_EDITOR_PATH!");
-                }
-                const licenseType = core.getInput('license', { required: true });
-                if (licenseType.toLowerCase().startsWith('f')) {
-                    const servicesConfig = core.getInput('services-config', { required: true });
-                    await licenseClient.ActivateLicenseWithConfig(servicesConfig);
-                } else {
-                    const username = core.getInput('username', { required: licenseType.toLowerCase().startsWith('p') });
-                    const password = core.getInput('password', { required: licenseType.toLowerCase().startsWith('p') });
-                    const serial = core.getInput('serial', { required: licenseType.toLowerCase().startsWith('pro') });
-                    await licenseClient.ActivateLicense(username, password, serial);
-                }
-                core.saveState('isPost', true);
-                isActive = await licenseClient.CheckExistingLicense();
-                if (!isActive) {
-                    throw Error('Unable to find Unity License!');
-                }
-                await licenseClient.ShowEntitlements();
-            } finally {
-                core.endGroup();
+            activeLicenses = await licenseClient.ShowEntitlements();
+        }
+        try {
+            const editorPath = process.env.UNITY_EDITOR_PATH;
+            if (!editorPath) {
+                throw Error("Missing UNITY_EDITOR_PATH!");
             }
+            const licenseType = core.getInput('license', { required: true });
+            if (activeLicenses.includes(licenseType)) {
+                core.info(`Unity License already activated with ${licenseType}!`);
+                return;
+            }
+            if (licenseType.toLowerCase().startsWith('f')) {
+                const servicesConfig = core.getInput('services-config', { required: true });
+                await licenseClient.ActivateLicenseWithConfig(servicesConfig);
+            } else {
+                const username = core.getInput('username', { required: licenseType.toLowerCase().startsWith('p') });
+                const password = core.getInput('password', { required: licenseType.toLowerCase().startsWith('p') });
+                const serial = core.getInput('serial', { required: licenseType.toLowerCase().startsWith('pro') });
+                await licenseClient.ActivateLicense(username, password, serial);
+            }
+            core.saveState('isPost', true);
+            core.saveState('license', licenseType);
+            isActive = await licenseClient.CheckExistingLicense();
+            if (!isActive) {
+                throw Error('Unable to find Unity License!');
+            }
+            activeLicenses = await licenseClient.ShowEntitlements();
+        } finally {
+            core.endGroup();
         }
     } catch (error) {
         core.setFailed(`Unity License Activation Failed!\n${error}`);
@@ -28656,6 +28659,16 @@ async function Deactivate() {
         if (isActive) {
             core.startGroup(`Unity License Deactivation...`);
             try {
+                const licenseType = core.getState('license');
+                if (licenseType.startsWith('f')) {
+                    core.debug(`${licenseType}`);
+                    return;
+                }
+                const activeLicenses = await licensingClient.ShowEntitlements();
+                if (!activeLicenses.includes(licenseType)) {
+                    core.info(`${licenseType} was never activated.`);
+                    return;
+                }
                 await licensingClient.ReturnLicense();
             }
             finally {
@@ -28908,7 +28921,22 @@ async function Version() {
 async function ShowEntitlements() {
     const output = await execWithMask([`--showEntitlements`]);
     // Parse the output to get the license type
-    const licenseType = output.match(/License Type: (\w+)/);
+    const matches = output.matchAll(/Product Name: (?:<license>\w+)/g);
+    // check if licenseType.match.group.license is Unity Pro or Unity Personal
+    // could have one or more licenses active
+    const licenses = [];
+    if (!matches || matches.length === 0) {
+        core.debug(`No active licenses found.`);
+        return undefined;
+    }
+    core.debug(`Active Licenses:`);
+    for (const match of matches) {
+        if (match.groups.license) {
+            licenses.push(match.groups.license);
+            core.debug(match.groups.license);
+        }
+    }
+    return licenses;
 }
 
 async function ActivateLicense(username, password, serial) {
