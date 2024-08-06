@@ -13,7 +13,8 @@ async function Deactivate() {
                     return;
                 }
                 const activeLicenses = await licensingClient.ShowEntitlements();
-                if (!activeLicenses.includes(licenseType.toLowerCase())) {
+                if (licenseType !== undefined &&
+                    !activeLicenses.includes(licenseType.toLowerCase())) {
                     core.warning(`${licenseType} was never activated.`);
                 }
                 await licensingClient.ReturnLicense();

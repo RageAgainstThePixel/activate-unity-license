@@ -28620,7 +28620,7 @@ async function Activate() {
                 throw Error(`Invalid License Type: ${licenseType}! Must be Professional, Personal, or Floating.`);
         }
         if (activeLicenses.includes(licenseType.toLocaleLowerCase())) {
-            core.info(`Unity License already activated with ${licenseType}!`);
+            core.warning(`Unity License already activated with ${licenseType}!`);
             return;
         }
         core.startGroup('Attempting to activate Unity License...');
@@ -28673,7 +28673,8 @@ async function Deactivate() {
                     return;
                 }
                 const activeLicenses = await licensingClient.ShowEntitlements();
-                if (!activeLicenses.includes(licenseType.toLowerCase())) {
+                if (licenseType !== undefined &&
+                    !activeLicenses.includes(licenseType.toLowerCase())) {
                     core.warning(`${licenseType} was never activated.`);
                 }
                 await licensingClient.ReturnLicense();
