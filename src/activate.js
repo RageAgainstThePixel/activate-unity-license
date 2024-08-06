@@ -14,36 +14,39 @@ async function Activate() {
         if (!editorPath) {
             throw Error("Missing UNITY_EDITOR_PATH!");
         }
-        const licenseType = core.getInput('license', { required: true });
-        switch (licenseType.toLowerCase()) {
+        const license = core.getInput('license', { required: true });
+        switch (license.toLowerCase()) {
             case 'professional':
             case 'personal':
             case 'floating':
                 break;
             default:
-                throw Error(`Invalid License Type: ${licenseType}! Must be Professional, Personal, or Floating.`);
+                throw Error(`Invalid License: ${license}! Must be Professional, Personal, or Floating.`);
         }
-        if (activeLicenses.includes(licenseType.toLocaleLowerCase())) {
-            core.warning(`Unity License already activated with ${licenseType}!`);
+        if (activeLicenses.includes(license.toLocaleLowerCase())) {
+            core.warning(`Unity License already activated with ${license}!`);
             return;
         }
         core.startGroup('Attempting to activate Unity License...');
         try {
-            if (licenseType.toLowerCase().startsWith('f')) {
+            if (license.toLowerCase().startsWith('f')) {
                 const servicesConfig = core.getInput('services-config', { required: true });
                 await licenseClient.ActivateLicenseWithConfig(servicesConfig);
             } else {
                 const username = core.getInput('username', { required: true });
                 const password = core.getInput('password', { required: true });
-                const serial = core.getInput('serial', { required: licenseType.toLowerCase().startsWith('pro') });
+                const serial = core.getInput('serial', { required: license.toLowerCase().startsWith('pro') });
                 await licenseClient.ActivateLicense(username, password, serial);
             }
-            core.saveState('license', licenseType);
+            core.saveState('license', license);
             isActive = await licenseClient.CheckExistingLicense();
             if (!isActive) {
-                throw Error('Unable to find Unity License!');
+                throw Error('Unable to find a valid Unity License!');
             }
             activeLicenses = await licenseClient.ShowEntitlements();
+            if (!activeLicenses.includes(license.toLowerCase())) {
+                throw Error(`Failed to activate Unity License with ${license}!`);
+            }
         } finally {
             core.endGroup();
         }

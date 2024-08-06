@@ -262,9 +262,13 @@ async function ActivateLicenseWithConfig(servicesConfig) {
     await fs.writeFile(servicesConfigPath, Buffer.from(servicesConfig, 'base64'));
 }
 
-async function ReturnLicense() {
+async function ReturnLicense(license) {
     await execWithMask([`--return-ulf`]);
-    await ShowEntitlements();
+    const activeLicenses = await licenseClient.ShowEntitlements();
+    if (license !== undefined &&
+        activeLicenses.includes(license.toLowerCase())) {
+        throw Error(`${license} was not returned.`);
+    }
 }
 
 module.exports = { CheckExistingLicense, Version, ShowEntitlements, ActivateLicense, ActivateLicenseWithConfig, ReturnLicense };

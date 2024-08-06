@@ -7,17 +7,17 @@ async function Deactivate() {
         if (isActive) {
             core.startGroup(`Unity License Deactivation...`);
             try {
-                const licenseType = core.getState('license');
-                core.info(`post state: ${licenseType}`);
-                if (licenseType.startsWith('f')) {
+                const license = core.getState('license');
+                core.debug(`post state: ${license}`);
+                if (license.startsWith('f')) {
                     return;
                 }
                 const activeLicenses = await licensingClient.ShowEntitlements();
-                if (licenseType !== undefined &&
-                    !activeLicenses.includes(licenseType.toLowerCase())) {
-                    core.warning(`${licenseType} was never activated.`);
+                if (license !== undefined &&
+                    !activeLicenses.includes(license.toLowerCase())) {
+                    core.warning(`${license} was never activated.`);
                 }
-                await licensingClient.ReturnLicense();
+                await licensingClient.ReturnLicense(license);
             }
             finally {
                 core.endGroup();
