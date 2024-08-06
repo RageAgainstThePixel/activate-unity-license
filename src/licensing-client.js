@@ -53,7 +53,12 @@ async function getLicensingClient() {
             case 'linux':
                 globs.push('Data', 'Resources', 'Licensing', 'Client', 'Unity.Licensing.Client');
         }
-        licenseClientPath = await ResolveGlobPath(globs);
+        try {
+            licenseClientPath = path.join(...globs);
+            await fs.access(licenseClientPath, fs.constants.X_OK);
+        } catch (error) {
+            licenseClientPath = await ResolveGlobPath(globs);
+        }
         core.debug(`Unity Licensing Client Path: ${licenseClientPath}`);
         await fs.access(licenseClientPath, fs.constants.R_OK);
         return licenseClientPath;
