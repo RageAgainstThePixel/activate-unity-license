@@ -23,7 +23,7 @@ This action requires several secrets that need to be setup in the repository or 
 * `UNITY_SERVICES_CONFIG`: Unity License Client `services-config.json` encoded base base64 string.
 
 > [!IMPORTANT]
-> Don't forget that pro licenses only support 2 active licenses at a time!
+> Don't forget that Professional licenses only support 2 activations at a time!
 
 | name | description | required |
 | ---- | ----------- | -------- |
