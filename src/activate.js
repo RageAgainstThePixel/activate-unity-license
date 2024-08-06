@@ -4,6 +4,7 @@ const core = require('@actions/core');
 async function Activate() {
     try {
         core.startGroup('Attempting to activate Unity License...');
+        core.saveState('isPost', true);
         await licenseClient.Version();
         let activeLicenses = [];
         let isActive = await licenseClient.CheckExistingLicense();
@@ -37,7 +38,6 @@ async function Activate() {
                 const serial = core.getInput('serial', { required: licenseType.toLowerCase().startsWith('pro') });
                 await licenseClient.ActivateLicense(username, password, serial);
             }
-            core.saveState('isPost', true);
             core.saveState('license', licenseType);
             isActive = await licenseClient.CheckExistingLicense();
             if (!isActive) {
