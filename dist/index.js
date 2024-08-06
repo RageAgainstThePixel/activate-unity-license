@@ -28969,7 +28969,7 @@ async function ActivateLicenseWithConfig(servicesConfig) {
 
 async function ReturnLicense(license) {
     await execWithMask([`--return-ulf`]);
-    const activeLicenses = await licenseClient.ShowEntitlements();
+    const activeLicenses = await ShowEntitlements();
     if (license !== undefined &&
         activeLicenses.includes(license.toLowerCase())) {
         throw Error(`${license} was not returned.`);
