@@ -236,10 +236,14 @@ async function ShowEntitlements() {
         if (match.groups.license) {
             switch (match.groups.license) {
                 case 'Unity Pro':
-                    licenses.push('professional');
+                    if (!licenses.includes('professional')) {
+                        licenses.push('professional');
+                    }
                     break;
                 case 'Unity Personal':
-                    licenses.push('personal');
+                    if (!licenses.includes('personal')) {
+                        licenses.push('personal');
+                    }
                     break;
             }
         }
