@@ -28772,6 +28772,12 @@ async function execWithMask(args) {
         exitCode = await exec.exec(`"${client}"`, args, {
             silent: true,
             listeners: {
+                stdline: (data) => {
+                    const line = data.toString();
+                    if (line && line.trim().length > 0) {
+                        core.info(maskSerialInOutput(line));
+                    }
+                },
                 stdout: (data) => {
                     output += data.toString();
                 },
@@ -28780,14 +28786,9 @@ async function execWithMask(args) {
                 }
             }
         });
-
     } finally {
-        const maskedOutput = maskSerialInOutput(output);
         if (exitCode !== 0) {
-            var errorMessage = getExitCodeMessage(exitCode);
-            throw Error(`${errorMessage}\n${maskedOutput}`);
-        } else {
-            core.info(maskedOutput);
+            throw Error(getExitCodeMessage(exitCode));
         }
         return output;
     }
