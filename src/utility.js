@@ -39,8 +39,9 @@ async function GetEditorRootPath(editorPath) {
     return editorRootPath;
 }
 
-async function ResolveGlobPath(globPath) {
+async function ResolveGlobPath(globArray) {
     try {
+        const globPath = path.join(...globArray);
         const result = await findGlobPattern(globPath);
         await fs.access(result, fs.constants.R_OK);
         core.debug(`result:\n  > "${result}"`);
