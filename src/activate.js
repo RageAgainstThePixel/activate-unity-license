@@ -16,6 +16,14 @@ async function Activate() {
                 throw Error("Missing UNITY_EDITOR_PATH!");
             }
             const licenseType = core.getInput('license', { required: true });
+            switch (licenseType.toLowerCase()) {
+                case 'professional':
+                case 'personal':
+                case 'floating':
+                    break;
+                default:
+                    throw Error(`Invalid License Type: ${licenseType}! Must be Professional, Personal, or Floating.`);
+            }
             if (activeLicenses.includes(licenseType.toLocaleLowerCase())) {
                 core.info(`Unity License already activated with ${licenseType}!`);
                 return;
@@ -24,8 +32,8 @@ async function Activate() {
                 const servicesConfig = core.getInput('services-config', { required: true });
                 await licenseClient.ActivateLicenseWithConfig(servicesConfig);
             } else {
-                const username = core.getInput('username', { required: licenseType.toLowerCase().startsWith('p') });
-                const password = core.getInput('password', { required: licenseType.toLowerCase().startsWith('p') });
+                const username = core.getInput('username', { required: true });
+                const password = core.getInput('password', { required: true });
                 const serial = core.getInput('serial', { required: licenseType.toLowerCase().startsWith('pro') });
                 await licenseClient.ActivateLicense(username, password, serial);
             }

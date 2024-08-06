@@ -229,13 +229,10 @@ async function ShowEntitlements() {
     const matches = output.matchAll(/Product Name: (?<license>.+)/g);
     const licenses = [];
     if (!matches || matches.length === 0) {
-        core.info(`No active licenses found.`);
         return undefined;
     }
-    core.info(`Active Licenses:`);
     for (const match of matches) {
         if (match.groups.license) {
-            core.info(match.groups.license);
             switch (match.groups.license) {
                 case 'Unity Pro':
                     licenses.push('professional');
