@@ -55,13 +55,17 @@ async function getLicensingClient() {
 };
 
 async function execWithMask(args) {
-    let output = '';
-    let exitCode = 0;
     try {
         if (!client) {
             client = await getLicensingClient();
         }
         await fs.access(client, fs.constants.X_OK);
+    } catch (error) {
+        throw Error(`Failed to get Licensing Client!\n${error}`);
+    }
+    let output = '';
+    let exitCode = 0;
+    try {
         core.info(`[command]"${client}" ${args.join(' ')}`);
         exitCode = await exec.exec(`"${client}"`, args, {
             silent: true,
@@ -84,8 +88,8 @@ async function execWithMask(args) {
         if (exitCode !== 0) {
             throw Error(getExitCodeMessage(exitCode));
         }
-        return output;
     }
+    return output;
 };
 
 function maskSerialInOutput(output) {
