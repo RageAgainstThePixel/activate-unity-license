@@ -28620,6 +28620,7 @@ async function Activate() {
             default:
                 throw Error(`Invalid License: ${license}! Must be Professional, Personal, or Floating.`);
         }
+        core.saveState('license', license);
         if (activeLicenses.includes(license.toLocaleLowerCase())) {
             core.warning(`Unity License already activated with ${license}!`);
             return;
@@ -28635,7 +28636,6 @@ async function Activate() {
                 const serial = core.getInput('serial', { required: license.toLowerCase().startsWith('pro') });
                 await licenseClient.ActivateLicense(username, password, serial);
             }
-            core.saveState('license', license);
             isActive = await licenseClient.CheckExistingLicense();
             if (!isActive) {
                 throw Error('Unable to find a valid Unity License!');
