@@ -28667,7 +28667,6 @@ async function Deactivate() {
                 const activeLicenses = await licensingClient.ShowEntitlements();
                 if (!activeLicenses.includes(licenseType)) {
                     core.info(`${licenseType} was never activated.`);
-                    return;
                 }
                 await licensingClient.ReturnLicense();
             }
@@ -28920,20 +28919,17 @@ async function Version() {
 
 async function ShowEntitlements() {
     const output = await execWithMask([`--showEntitlements`]);
-    // Parse the output to get the license type
     const matches = output.matchAll(/Product Name: (?:<license>\w+)/g);
-    // check if licenseType.match.group.license is Unity Pro or Unity Personal
-    // could have one or more licenses active
     const licenses = [];
     if (!matches || matches.length === 0) {
-        core.debug(`No active licenses found.`);
+        core.info(`No active licenses found.`);
         return undefined;
     }
-    core.debug(`Active Licenses:`);
+    core.info(`Active Licenses:`);
     for (const match of matches) {
         if (match.groups.license) {
             licenses.push(match.groups.license);
-            core.debug(match.groups.license);
+            core.info(match.groups.license);
         }
     }
     return licenses;

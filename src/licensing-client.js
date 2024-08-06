@@ -226,10 +226,7 @@ async function Version() {
 
 async function ShowEntitlements() {
     const output = await execWithMask([`--showEntitlements`]);
-    // Parse the output to get the license type
     const matches = output.matchAll(/Product Name: (?:<license>\w+)/g);
-    // check if licenseType.match.group.license is Unity Pro or Unity Personal
-    // could have one or more licenses active
     const licenses = [];
     if (!matches || matches.length === 0) {
         core.info(`No active licenses found.`);
