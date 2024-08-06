@@ -16,7 +16,7 @@ async function Activate() {
                 throw Error("Missing UNITY_EDITOR_PATH!");
             }
             const licenseType = core.getInput('license', { required: true });
-            if (activeLicenses.includes(licenseType)) {
+            if (activeLicenses.includes(licenseType.toLocaleLowerCase())) {
                 core.info(`Unity License already activated with ${licenseType}!`);
                 return;
             }

@@ -28612,7 +28612,7 @@ async function Activate() {
                 throw Error("Missing UNITY_EDITOR_PATH!");
             }
             const licenseType = core.getInput('license', { required: true });
-            if (activeLicenses.includes(licenseType)) {
+            if (activeLicenses.includes(licenseType.toLocaleLowerCase())) {
                 core.info(`Unity License already activated with ${licenseType}!`);
                 return;
             }
@@ -28660,12 +28660,12 @@ async function Deactivate() {
             core.startGroup(`Unity License Deactivation...`);
             try {
                 const licenseType = core.getState('license');
+                core.info(`post state: ${licenseType}`);
                 if (licenseType.startsWith('f')) {
-                    core.debug(`${licenseType}`);
                     return;
                 }
                 const activeLicenses = await licensingClient.ShowEntitlements();
-                if (!activeLicenses.includes(licenseType)) {
+                if (!activeLicenses.includes(licenseType.toLowerCase())) {
                     core.info(`${licenseType} was never activated.`);
                 }
                 await licensingClient.ReturnLicense();
@@ -28919,7 +28919,7 @@ async function Version() {
 
 async function ShowEntitlements() {
     const output = await execWithMask([`--showEntitlements`]);
-    const matches = output.matchAll(/Product Name: (?:<license>\w+)/g);
+    const matches = output.matchAll(/Product Name: (?<license>.+)/g);
     const licenses = [];
     if (!matches || matches.length === 0) {
         core.info(`No active licenses found.`);
@@ -28928,8 +28928,15 @@ async function ShowEntitlements() {
     core.info(`Active Licenses:`);
     for (const match of matches) {
         if (match.groups.license) {
-            licenses.push(match.groups.license);
             core.info(match.groups.license);
+            switch (match.groups.license) {
+                case 'Unity Pro':
+                    licenses.push('professional');
+                    break;
+                case 'Unity Personal':
+                    licenses.push('personal');
+                    break;
+            }
         }
     }
     return licenses;

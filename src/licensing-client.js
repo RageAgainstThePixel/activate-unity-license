@@ -226,7 +226,7 @@ async function Version() {
 
 async function ShowEntitlements() {
     const output = await execWithMask([`--showEntitlements`]);
-    const matches = output.matchAll(/Product Name: (?:<license>\w+)/g);
+    const matches = output.matchAll(/Product Name: (?<license>.+)/g);
     const licenses = [];
     if (!matches || matches.length === 0) {
         core.info(`No active licenses found.`);
@@ -235,8 +235,15 @@ async function ShowEntitlements() {
     core.info(`Active Licenses:`);
     for (const match of matches) {
         if (match.groups.license) {
-            licenses.push(match.groups.license);
             core.info(match.groups.license);
+            switch (match.groups.license) {
+                case 'Unity Pro':
+                    licenses.push('professional');
+                    break;
+                case 'Unity Personal':
+                    licenses.push('personal');
+                    break;
+            }
         }
     }
     return licenses;
