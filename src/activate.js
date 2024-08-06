@@ -3,7 +3,6 @@ const core = require('@actions/core');
 
 async function Activate() {
     try {
-        core.startGroup('Attempting to activate Unity License...');
         core.saveState('isPost', true);
         await licenseClient.Version();
         let activeLicenses = [];
@@ -11,24 +10,25 @@ async function Activate() {
         if (isActive) {
             activeLicenses = await licenseClient.ShowEntitlements();
         }
+        const editorPath = process.env.UNITY_EDITOR_PATH;
+        if (!editorPath) {
+            throw Error("Missing UNITY_EDITOR_PATH!");
+        }
+        const licenseType = core.getInput('license', { required: true });
+        switch (licenseType.toLowerCase()) {
+            case 'professional':
+            case 'personal':
+            case 'floating':
+                break;
+            default:
+                throw Error(`Invalid License Type: ${licenseType}! Must be Professional, Personal, or Floating.`);
+        }
+        if (activeLicenses.includes(licenseType.toLocaleLowerCase())) {
+            core.info(`Unity License already activated with ${licenseType}!`);
+            return;
+        }
+        core.startGroup('Attempting to activate Unity License...');
         try {
-            const editorPath = process.env.UNITY_EDITOR_PATH;
-            if (!editorPath) {
-                throw Error("Missing UNITY_EDITOR_PATH!");
-            }
-            const licenseType = core.getInput('license', { required: true });
-            switch (licenseType.toLowerCase()) {
-                case 'professional':
-                case 'personal':
-                case 'floating':
-                    break;
-                default:
-                    throw Error(`Invalid License Type: ${licenseType}! Must be Professional, Personal, or Floating.`);
-            }
-            if (activeLicenses.includes(licenseType.toLocaleLowerCase())) {
-                core.info(`Unity License already activated with ${licenseType}!`);
-                return;
-            }
             if (licenseType.toLowerCase().startsWith('f')) {
                 const servicesConfig = core.getInput('services-config', { required: true });
                 await licenseClient.ActivateLicenseWithConfig(servicesConfig);
