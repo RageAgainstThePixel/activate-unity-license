@@ -44,7 +44,6 @@ async function ResolveGlobPath(globs) {
         const globPath = path.join(...globs);
         const result = await findGlobPattern(globPath);
         await fs.access(result, fs.constants.R_OK);
-        core.debug(`result:\n  > "${result}"`);
         return result;
     } catch (error) {
         throw error;
@@ -52,10 +51,10 @@ async function ResolveGlobPath(globs) {
 }
 
 async function findGlobPattern(pattern) {
-    core.debug(`searching for: ${pattern}...`);
+    core.info(`searching for: ${pattern}...`);
     const globber = await glob.create(pattern);
     for await (const file of globber.globGenerator()) {
-        core.debug(`found glob: ${file}`);
+        core.info(`found glob: ${file}`);
         return file;
     }
 }
