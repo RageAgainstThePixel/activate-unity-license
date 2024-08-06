@@ -232,14 +232,14 @@ async function ShowEntitlements() {
     // could have one or more licenses active
     const licenses = [];
     if (!matches || matches.length === 0) {
-        core.debug(`No active licenses found.`);
+        core.info(`No active licenses found.`);
         return undefined;
     }
-    core.debug(`Active Licenses:`);
+    core.info(`Active Licenses:`);
     for (const match of matches) {
         if (match.groups.license) {
             licenses.push(match.groups.license);
-            core.debug(match.groups.license);
+            core.info(match.groups.license);
         }
     }
     return licenses;
