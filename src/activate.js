@@ -22,7 +22,7 @@ async function Activate() {
         }
         core.saveState('license', license);
         if (activeLicenses.includes(license.toLocaleLowerCase())) {
-            core.warning(`Unity License already activated with ${license}!`);
+            core.warning(`Unity ${license} License already activated!`);
             return;
         }
         core.startGroup('Attempting to activate Unity License...');

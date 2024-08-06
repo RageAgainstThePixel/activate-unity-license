@@ -41,24 +41,21 @@ async function GetEditorRootPath(editorPath) {
 
 async function ResolveGlobPath(globPath) {
     try {
-        if (Array.isArray(globPath)) {
-            globPath = path.join(...globPath);
-        }
-        core.debug(`globPath: ${globPath}`);
-        globPath = path.normalize(globPath);
-        core.debug(`normalized globPath: ${globPath}`);
-        const globber = await glob.create(globPath);
-        const globPaths = await globber.glob();
-        core.debug(`globPaths: ${globPaths}`);
-        const result = globPaths[0];
-        if (!result || globPaths.length === 0) {
-            throw new Error(`Failed to resolve ${globPath}\n  > ${globPaths}`);
-        }
+        const result = await findGlobPattern(globPath);
         await fs.access(result, fs.constants.R_OK);
         core.debug(`result:\n  > "${result}"`);
         return result;
     } catch (error) {
         throw error;
+    }
+}
+
+async function findGlobPattern(pattern) {
+    core.debug(`searching for: ${pattern}...`);
+    const globber = await glob.create(pattern);
+    for await (const file of globber.globGenerator()) {
+        core.debug(`found glob: ${file}`);
+        return file;
     }
 }
 

@@ -2,7 +2,6 @@ const { ResolveGlobPath, GetEditorRootPath, GetHubRootPath } = require('./utilit
 const core = require('@actions/core');
 const exec = require('@actions/exec');
 const fs = require("fs").promises;
-const fsSync = require("fs");
 const path = require('path');
 
 let client = undefined;

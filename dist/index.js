@@ -28618,7 +28618,7 @@ async function Activate() {
         }
         core.saveState('license', license);
         if (activeLicenses.includes(license.toLocaleLowerCase())) {
-            core.warning(`Unity License already activated with ${license}!`);
+            core.warning(`Unity ${license} License already activated!`);
             return;
         }
         core.startGroup('Attempting to activate Unity License...');
@@ -28698,7 +28698,6 @@ const { ResolveGlobPath, GetEditorRootPath, GetHubRootPath } = __nccwpck_require
 const core = __nccwpck_require__(2186);
 const exec = __nccwpck_require__(1514);
 const fs = (__nccwpck_require__(7147).promises);
-const fsSync = __nccwpck_require__(7147);
 const path = __nccwpck_require__(1017);
 
 let client = undefined;
@@ -28956,24 +28955,21 @@ async function GetEditorRootPath(editorPath) {
 
 async function ResolveGlobPath(globPath) {
     try {
-        if (Array.isArray(globPath)) {
-            globPath = path.join(...globPath);
-        }
-        core.debug(`globPath: ${globPath}`);
-        globPath = path.normalize(globPath);
-        core.debug(`normalized globPath: ${globPath}`);
-        const globber = await glob.create(globPath);
-        const globPaths = await globber.glob();
-        core.debug(`globPaths: ${globPaths}`);
-        const result = globPaths[0];
-        if (!result || globPaths.length === 0) {
-            throw new Error(`Failed to resolve ${globPath}\n  > ${globPaths}`);
-        }
+        const result = await findGlobPattern(globPath);
         await fs.access(result, fs.constants.R_OK);
         core.debug(`result:\n  > "${result}"`);
         return result;
     } catch (error) {
         throw error;
+    }
+}
+
+async function findGlobPattern(pattern) {
+    core.debug(`searching for: ${pattern}...`);
+    const globber = await glob.create(pattern);
+    for await (const file of globber.globGenerator()) {
+        core.debug(`found glob: ${file}`);
+        return file;
     }
 }
 
