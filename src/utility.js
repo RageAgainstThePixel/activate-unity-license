@@ -51,10 +51,10 @@ async function ResolveGlobPath(globs) {
 }
 
 async function findGlobPattern(pattern) {
-    core.info(`searching for: ${pattern}...`);
+    core.debug(`searching for: ${pattern}...`);
     const globber = await glob.create(pattern);
     for await (const file of globber.globGenerator()) {
-        core.info(`found glob: ${file}`);
+        core.debug(`found glob: ${file}`);
         return file;
     }
 }
