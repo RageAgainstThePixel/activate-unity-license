@@ -42,7 +42,7 @@ async function getLicensingClient() {
         // Linux: <UnityEditorDir>/Data/Resources/Licensing/Client/
         const rootEditorPath = await GetEditorRootPath(editorPath);
         core.debug(`Root Editor Path: ${rootEditorPath}`);
-        const globs = [rootEditorPath, '**'];
+        const globs = [rootEditorPath];
         switch (process.platform) {
             case 'win32':
                 globs.push('Data\\Resources\\Licensing\\Client\\Unity.Licensing.Client.exe');
@@ -77,9 +77,6 @@ async function execWithMask(args) {
             silent: true,
             listeners: {
                 stdout: (data) => {
-                    output += data.toString();
-                },
-                stderr: (data) => {
                     output += data.toString();
                 }
             }
