@@ -4,17 +4,13 @@ const core = require('@actions/core');
 async function Activate() {
     let license = undefined;
     try {
-        core.saveState('isPost', true);
-        await licenseClient.Version();
-        let activeLicenses = [];
-        let isActive = await licenseClient.CheckExistingLicense();
-        if (isActive) {
-            activeLicenses = await licenseClient.ShowEntitlements();
-        }
         const editorPath = process.env.UNITY_EDITOR_PATH;
         if (!editorPath) {
             throw Error("Missing UNITY_EDITOR_PATH!");
         }
+        core.saveState('isPost', true);
+        await licenseClient.Version();
+        const activeLicenses = await licenseClient.ShowEntitlements();
         license = core.getInput('license', { required: true });
         switch (license.toLowerCase()) {
             case 'professional':
@@ -39,10 +35,6 @@ async function Activate() {
                 const password = core.getInput('password', { required: true });
                 const serial = core.getInput('serial', { required: license.toLowerCase().startsWith('pro') });
                 await licenseClient.ActivateLicense(username, password, serial);
-            }
-            isActive = await licenseClient.CheckExistingLicense();
-            if (!isActive) {
-                throw Error('Unable to find a valid Unity License!');
             }
             activeLicenses = await licenseClient.ShowEntitlements();
             if (!activeLicenses.includes(license.toLowerCase())) {

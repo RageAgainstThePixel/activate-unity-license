@@ -28600,17 +28600,13 @@ const core = __nccwpck_require__(2186);
 async function Activate() {
     let license = undefined;
     try {
-        core.saveState('isPost', true);
-        await licenseClient.Version();
-        let activeLicenses = [];
-        let isActive = await licenseClient.CheckExistingLicense();
-        if (isActive) {
-            activeLicenses = await licenseClient.ShowEntitlements();
-        }
         const editorPath = process.env.UNITY_EDITOR_PATH;
         if (!editorPath) {
             throw Error("Missing UNITY_EDITOR_PATH!");
         }
+        core.saveState('isPost', true);
+        await licenseClient.Version();
+        const activeLicenses = await licenseClient.ShowEntitlements();
         license = core.getInput('license', { required: true });
         switch (license.toLowerCase()) {
             case 'professional':
@@ -28635,10 +28631,6 @@ async function Activate() {
                 const password = core.getInput('password', { required: true });
                 const serial = core.getInput('serial', { required: license.toLowerCase().startsWith('pro') });
                 await licenseClient.ActivateLicense(username, password, serial);
-            }
-            isActive = await licenseClient.CheckExistingLicense();
-            if (!isActive) {
-                throw Error('Unable to find a valid Unity License!');
             }
             activeLicenses = await licenseClient.ShowEntitlements();
             if (!activeLicenses.includes(license.toLowerCase())) {
@@ -28667,33 +28659,27 @@ const core = __nccwpck_require__(2186);
 
 async function Deactivate() {
     try {
-        const isActive = await licensingClient.CheckExistingLicense();
-        if (isActive) {
-            let license = undefined;
-            core.startGroup(`Unity License Deactivation...`);
-            try {
-                license = core.getState('license');
-                if (!license) {
-                    throw Error(`Failed to get post license state!`);
-                }
-                core.debug(`post state: ${license}`);
-                if (license.startsWith('f')) {
-                    return;
-                }
-                const activeLicenses = await licensingClient.ShowEntitlements();
-                if (license !== undefined &&
-                    !activeLicenses.includes(license.toLowerCase())) {
-                    core.warning(`${license} was never activated.`);
-                }
-                await licensingClient.ReturnLicense(license);
-            }
-            finally {
-                core.endGroup();
-            }
-            core.info(`Unity ${license} License successfully returned.`);
-        } else {
-            console.info(`No Unity License was activated.`);
+        const license = core.getState('license');
+        if (!license) {
+            throw Error(`Failed to get post license state!`);
         }
+        core.debug(`post state: ${license}`);
+        if (license.startsWith('f')) {
+            return;
+        }
+        core.startGroup(`Unity License Deactivation...`);
+        try {
+            const activeLicenses = await licensingClient.ShowEntitlements();
+            if (license !== undefined &&
+                !activeLicenses.includes(license.toLowerCase())) {
+                core.warning(`${license} was never activated.`);
+            }
+            await licensingClient.ReturnLicense(license);
+        }
+        finally {
+            core.endGroup();
+        }
+        core.info(`Unity ${license} License successfully returned.`);
     } catch (error) {
         core.setFailed(`Failed to deactivate license!\n${error}`);
         process.exit(1);
@@ -28879,58 +28865,6 @@ const servicesPath = {
     linux: path.join('/usr', 'share', 'unity3d', 'config')
 };
 
-async function CheckExistingLicense() {
-    core.info('Checking for existing Unity License activation...');
-    const paths = licensePaths[process.platform];
-    core.debug(`License paths: ${paths}`);
-    if (!paths || paths.length < 2) {
-        core.debug(`No license paths configured for platform: ${process.platform}`);
-        return false;
-    }
-    const [ulfDir, licensesDir] = paths.filter(Boolean);
-    if (!ulfDir) {
-        core.debug(`ULF Directory is not defined for ${process.platform}`);
-        return false;
-    }
-    if (!licensesDir) {
-        core.debug(`Licenses Directory is not defined for ${process.platform}`);
-        return false;
-    }
-    core.debug(`ULF Directory: ${ulfDir}`);
-    core.debug(`Licenses Directory: ${licensesDir}`);
-    if (process.platform === 'darwin' && !fsSync.existsSync(ulfDir)) {
-        core.debug(`Creating Unity license directory: ${ulfDir}`);
-        await fs.mkdir(ulfDir, { recursive: true });
-        await fs.chmod(ulfDir, 0o777);
-    }
-    const ulfPath = path.join(ulfDir, 'Unity_lic.ulf');
-    core.debug(`ULF Path: ${ulfPath}`);
-
-    try {
-        if (fsSync.existsSync(ulfPath)) {
-            core.debug(`Found license file at path: ${ulfPath}`);
-            return true;
-        } else {
-            core.debug(`License file does not exist at path: ${ulfPath}`);
-        }
-    } catch (error) {
-        core.warning(`Error checking ulf path: ${error}`);
-    }
-
-    try {
-        if (fsSync.existsSync(licensesDir)) {
-            core.debug(`Found licenses directory: ${licensesDir}`);
-            return fsSync.readdirSync(licensesDir).some(f => f.endsWith('.xml'));
-        } else {
-            core.debug(`Licenses directory does not exist: ${licensesDir}`);
-        }
-    } catch (error) {
-        core.warning(`Error checking licenses directory: ${error.message}`);
-    }
-
-    return false;
-}
-
 async function Version() {
     await execWithMask([`--version`]);
 }
@@ -28986,7 +28920,7 @@ async function ReturnLicense(license) {
     }
 }
 
-module.exports = { CheckExistingLicense, Version, ShowEntitlements, ActivateLicense, ActivateLicenseWithConfig, ReturnLicense };
+module.exports = { Version, ShowEntitlements, ActivateLicense, ActivateLicenseWithConfig, ReturnLicense };
 
 
 /***/ }),
