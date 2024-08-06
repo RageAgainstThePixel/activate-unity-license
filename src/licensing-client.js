@@ -148,21 +148,6 @@ function getExitCodeMessage(exitCode) {
     }
 }
 
-const licensePaths = {
-    win32: [
-        path.join(process.env.PROGRAMDATA || '', 'Unity'),
-        path.join(process.env.LOCALAPPDATA || '', 'Unity', 'licenses')
-    ],
-    darwin: [
-        path.join('/Library', 'Application Support', 'Unity') || '/Library/Application Support/Unity',
-        path.join('/Library', 'Unity', 'licenses' || '/Library/Unity/licenses')
-    ],
-    linux: [
-        path.join(process.env.HOME || '', '.local/share/unity3d/Unity'),
-        path.join(process.env.HOME || '', '.config/unity3d/Unity/licenses')
-    ]
-};
-
 const servicesPath = {
     win32: path.join(process.env.PROGRAMDATA || '', 'Unity', 'config'),
     darwin: path.join('/Library', 'Application Support', 'Unity', 'config'),
