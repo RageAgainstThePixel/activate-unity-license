@@ -28728,7 +28728,7 @@ async function getLicensingClient() {
         }
         licenseClientPath = await ResolveGlobPath(globs);
         core.debug(`Unity Licensing Client Path: ${licenseClientPath}`);
-        await fs.access(licenseClientPath, fs.constants.R_OK);
+        await fs.access(licenseClientPath, fs.constants.X_OK);
         return licenseClientPath;
     }
     else {
@@ -28757,7 +28757,7 @@ async function getLicensingClient() {
             licenseClientPath = await ResolveGlobPath(globs);
         }
         core.debug(`Unity Licensing Client Path: ${licenseClientPath}`);
-        await fs.access(licenseClientPath, fs.constants.R_OK);
+        await fs.access(licenseClientPath, fs.constants.X_OK);
         return licenseClientPath;
     }
 };
@@ -28765,9 +28765,6 @@ async function getLicensingClient() {
 async function execWithMask(args) {
     if (!client) {
         client = await getLicensingClient();
-    }
-    if (!client) {
-        throw Error('Failed to find Licensing Client!');
     }
     await fs.access(client, fs.constants.X_OK);
     let output = '';
@@ -28783,8 +28780,8 @@ async function execWithMask(args) {
             }
         });
     } finally {
-        output = maskSerialInOutput(output);
-        core.info(output);
+        const maskedOutput = maskSerialInOutput(output);
+        core.info(maskedOutput);
         if (exitCode !== 0) {
             throw Error(getExitCodeMessage(exitCode));
         }
