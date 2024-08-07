@@ -28784,7 +28784,11 @@ async function execWithMask(args) {
         });
     } finally {
         const maskedOutput = maskSerialInOutput(output);
-        core.info(maskedOutput);
+        const splitLines = maskedOutput.split(/\r?\n/);
+        for (const line of splitLines) {
+            if (line === undefined || line.length === 0) { continue; }
+            core.info(line);
+        }
         if (exitCode !== 0) {
             throw Error(getExitCodeMessage(exitCode));
         }
