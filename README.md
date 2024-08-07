@@ -1,6 +1,6 @@
 # activate-unity-license
 
-A GitHub Action for activating a [Unity Game Engine](https://unity.com) license on GitHub Action Runners.
+A GitHub Action to activate a [Unity Game Engine](https://unity.com) license for CI/CD workflows.
 
 ## How to use
 
@@ -20,7 +20,7 @@ This action requires several secrets that need to be setup in the repository or 
 * `UNITY_USERNAME`: The email address you use for your Unity Id.
 * `UNITY_PASSWORD`: The password you use for Unity Id access.
 * `UNITY_SERIAL`: The Serial number for the seat.
-* `UNITY_SERVICES_CONFIG`: Unity License Client `services-config.json` encoded base base64 string.
+* `UNITY_SERVICES_CONFIG`: Unity License Client `services-config.json` encoded as base64 string.
 
 > [!IMPORTANT]
 > Don't forget that Professional licenses only support 2 activations at a time!
