@@ -28751,7 +28751,7 @@ async function getLicensingClient() {
         }
         try {
             licenseClientPath = path.resolve(...globs);
-            core.info(`Testing Unity Licensing Client Path: ${licenseClientPath}`);
+            core.debug(`Testing Unity Licensing Client Path: ${licenseClientPath}`);
             await fs.access(licenseClientPath, fs.constants.R_OK);
         } catch (error) {
             licenseClientPath = await ResolveGlobPath(globs);
