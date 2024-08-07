@@ -80,6 +80,9 @@ async function execWithMask(args) {
             listeners: {
                 stdout: (data) => {
                     output += data.toString();
+                },
+                stderr: (data) => {
+                    output += data.toString();
                 }
             }
         });
