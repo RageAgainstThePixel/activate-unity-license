@@ -28951,13 +28951,13 @@ async function GetEditorRootPath(editorPath) {
     let editorRootPath = editorPath;
     switch (process.platform) {
         case 'darwin':
-            editorRootPath = path.join(editorPath, '../../../../');
+            editorRootPath = path.join(editorPath, '../../../');
             break;
         case 'win32':
-            editorRootPath = path.join(editorPath, '../../');
+            editorRootPath = path.join(editorPath, '../');
             break
         case 'linux':
-            editorRootPath = path.join(editorPath, '../../');
+            editorRootPath = path.join(editorPath, '../');
             break;
     }
     await fs.access(editorRootPath, fs.constants.R_OK);
@@ -28966,14 +28966,13 @@ async function GetEditorRootPath(editorPath) {
 }
 
 async function ResolveGlobPath(globs) {
-    try {
-        const globPath = path.join(...globs);
-        const result = await findGlobPattern(globPath);
-        await fs.access(result, fs.constants.R_OK);
-        return result;
-    } catch (error) {
-        throw error;
+    const globPath = path.join(...globs);
+    const result = await findGlobPattern(globPath);
+    if (result === undefined) {
+        throw Error(`Failed to resolve glob: ${globPath}`);
     }
+    await fs.access(result, fs.constants.R_OK);
+    return result;
 }
 
 async function findGlobPattern(pattern) {
