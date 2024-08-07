@@ -25,13 +25,13 @@ async function GetEditorRootPath(editorPath) {
     let editorRootPath = editorPath;
     switch (process.platform) {
         case 'darwin':
-            editorRootPath = path.join(editorPath, '../../../../');
+            editorRootPath = path.join(editorPath, '../../../');
             break;
         case 'win32':
-            editorRootPath = path.join(editorPath, '../../');
+            editorRootPath = path.join(editorPath, '../');
             break
         case 'linux':
-            editorRootPath = path.join(editorPath, '../../');
+            editorRootPath = path.join(editorPath, '../');
             break;
     }
     await fs.access(editorRootPath, fs.constants.R_OK);
@@ -39,26 +39,22 @@ async function GetEditorRootPath(editorPath) {
     return editorRootPath;
 }
 
-async function ResolveGlobPath(globPath) {
-    try {
-        if (Array.isArray(globPath)) {
-            globPath = path.join(...globPath);
-        }
-        core.debug(`globPath: ${globPath}`);
-        globPath = path.normalize(globPath);
-        core.debug(`normalized globPath: ${globPath}`);
-        const globber = await glob.create(globPath);
-        const globPaths = await globber.glob();
-        core.debug(`globPaths: ${globPaths}`);
-        const result = globPaths[0];
-        if (!result || globPaths.length === 0) {
-            throw new Error(`Failed to resolve ${globPath}\n  > ${globPaths}`);
-        }
-        await fs.access(result, fs.constants.R_OK);
-        core.debug(`result:\n  > "${result}"`);
-        return result;
-    } catch (error) {
-        throw error;
+async function ResolveGlobPath(globs) {
+    const globPath = path.join(...globs);
+    const result = await findGlobPattern(globPath);
+    if (result === undefined) {
+        throw Error(`Failed to resolve glob: ${globPath}`);
+    }
+    await fs.access(result, fs.constants.R_OK);
+    return result;
+}
+
+async function findGlobPattern(pattern) {
+    core.debug(`searching for: ${pattern}...`);
+    const globber = await glob.create(pattern);
+    for await (const file of globber.globGenerator()) {
+        core.debug(`found glob: ${file}`);
+        return file;
     }
 }
 

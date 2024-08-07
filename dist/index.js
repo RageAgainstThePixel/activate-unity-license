@@ -28596,80 +28596,55 @@ exports["default"] = _default;
 
 const licenseClient = __nccwpck_require__(917);
 const core = __nccwpck_require__(2186);
-const path = __nccwpck_require__(1017);
-const fs = __nccwpck_require__(7147);
-
-const platform = process.platform;
 
 async function Activate() {
+    let license = undefined;
     try {
-        let isActive = await licenseClient.CheckExistingLicense();
-        if (isActive) {
-            core.info('Unity License already activated!');
-            return;
-        } else {
-            core.startGroup('Attempting to activate Unity License...');
-            await licenseClient.Version();
+        const editorPath = process.env.UNITY_EDITOR_PATH;
+        if (!editorPath) {
+            throw Error("Missing UNITY_EDITOR_PATH!");
         }
+        core.saveState('isPost', true);
+        await licenseClient.Version();
+        let activeLicenses = await licenseClient.ShowEntitlements();
+        license = core.getInput('license', { required: true });
+        switch (license.toLowerCase()) {
+            case 'professional':
+            case 'personal':
+            case 'floating':
+                break;
+            default:
+                throw Error(`Invalid License: ${license}! Must be Professional, Personal, or Floating.`);
+        }
+        core.saveState('license', license);
+        if (activeLicenses.includes(license.toLocaleLowerCase())) {
+            core.warning(`Unity ${license} License already activated!`);
+            return;
+        }
+        core.startGroup('Attempting to activate Unity License...');
         try {
-            const editorPath = process.env.UNITY_EDITOR_PATH;
-            if (!editorPath) {
-                throw Error("Missing UNITY_EDITOR_PATH!");
+            if (license.toLowerCase().startsWith('f')) {
+                const servicesConfig = core.getInput('services-config', { required: true });
+                await licenseClient.ActivateLicenseWithConfig(servicesConfig);
+            } else {
+                const username = core.getInput('username', { required: true });
+                const password = core.getInput('password', { required: true });
+                const serial = core.getInput('serial', { required: license.toLowerCase().startsWith('pro') });
+                await licenseClient.ActivateLicense(username, password, serial);
             }
-            const licenseType = core.getInput('license', { required: true });
-            const username = core.getInput('username', { required: true });
-            const password = core.getInput('password', { required: true });
-            const serial = core.getInput('serial', { required: licenseType.toLowerCase().startsWith('pro') });
-            await licenseClient.ActivateLicense(username, password, serial);
-            isActive = await licenseClient.CheckExistingLicense();
-            if (!isActive) {
-                throw Error('Unable to find Unity License!');
+            activeLicenses = await licenseClient.ShowEntitlements();
+            if (!activeLicenses.includes(license.toLowerCase())) {
+                throw Error(`Failed to activate Unity License with ${license}!`);
             }
-            core.saveState('isPost', true);
-            await licenseClient.ShowEntitlements();
         } finally {
             core.endGroup();
         }
     } catch (error) {
-        core.setFailed(`Unity License Activation Failed!\n::error::${error}`);
-        copyLogs();
+        core.setFailed(`Unity License Activation Failed!\n${error}`);
         process.exit(1);
     }
-    core.info('Unity License Activated!');
+    core.info(`Unity ${license} License Activated!`);
 }
-
-const licenseLogs = {
-    win32: path.resolve(process.env.APPDATA || '', 'Unity', 'Unity.Licensing.Client.log'),
-    darwin: path.resolve(process.env.HOME || '', 'Library', 'Logs', 'Unity', 'Unity.Licensing.Client.log'),
-    linux: path.resolve(process.env.HOME || '', '.config', 'unity3d', 'Unity', 'Unity.Licensing.Client.log')
-};
-
-const hubLogs = {
-    win32: path.resolve(process.env.APPDATA || '', 'UnityHub', 'logs', 'info-log.json'),
-    darwin: path.resolve(process.env.HOME || '', 'Library', 'Application Support', 'UnityHub', 'logs', 'info-log.json'),
-    linux: path.resolve(process.env.HOME || '', '.config', 'UnityHub', 'logs', 'info-log.json')
-};
-
-const copyLogs = () => {
-    core.debug(`Unity Licensing Client Log: ${licenseLogs[platform]}`);
-    if (fs.existsSync(licenseLogs[platform])) {
-        copyFileToWorkspace(licenseLogs[platform], 'Unity.Licensing.Client.log');
-    } else {
-        core.warning(`Unity Licensing Client Log: ${licenseLogs[platform]} not found!`);
-    }
-    core.debug(`Unity Hub Log: ${hubLogs[platform]}`);
-    if (fs.existsSync(hubLogs[platform])) {
-        copyFileToWorkspace(hubLogs[platform], 'UnityHub.log');
-    } else {
-        core.warning(`Unity Hub Log: ${hubLogs[platform]} not found!`);
-    }
-};
-
-const copyFileToWorkspace = (filePath, fileName) => {
-    const workspace = process.env.GITHUB_WORKSPACE || process.cwd();
-    const logPath = path.resolve(workspace, fileName);
-    fs.copyFileSync(filePath, logPath);
-};
 
 module.exports = { Activate };
 
@@ -28684,21 +28659,29 @@ const core = __nccwpck_require__(2186);
 
 async function Deactivate() {
     try {
-        const isActive = await licensingClient.CheckExistingLicense();
-        if (isActive) {
-            core.startGroup(`Unity License Deactivation...`);
-            try {
-                await licensingClient.ReturnLicense();
-            }
-            finally {
-                core.endGroup();
-                core.info('Unity License successfully returned.');
-            }
-        } else {
-            console.info(`No Unity License was activated.`);
+        const license = core.getState('license');
+        if (!license) {
+            throw Error(`Failed to get post license state!`);
         }
+        core.debug(`post state: ${license}`);
+        if (license.startsWith('f')) {
+            return;
+        }
+        core.startGroup(`Unity License Deactivation...`);
+        try {
+            const activeLicenses = await licensingClient.ShowEntitlements();
+            if (license !== undefined &&
+                !activeLicenses.includes(license.toLowerCase())) {
+                core.warning(`${license} was never activated.`);
+            }
+            await licensingClient.ReturnLicense(license);
+        }
+        finally {
+            core.endGroup();
+        }
+        core.info(`Unity ${license} License successfully returned.`);
     } catch (error) {
-        core.setFailed(`Failed to deactivate license!\n::error::${error}`);
+        core.setFailed(`Failed to deactivate license!\n${error}`);
         process.exit(1);
     }
 };
@@ -28713,15 +28696,14 @@ module.exports = { Deactivate }
 
 const { ResolveGlobPath, GetEditorRootPath, GetHubRootPath } = __nccwpck_require__(4345);
 const core = __nccwpck_require__(2186);
-const glob = __nccwpck_require__(8090);
 const exec = __nccwpck_require__(1514);
 const fs = (__nccwpck_require__(7147).promises);
-const fsSync = __nccwpck_require__(7147);
 const path = __nccwpck_require__(1017);
 
-const platform = process.platform;
+let client = undefined;
 
 async function getLicensingClient() {
+    core.debug('Getting Licensing Client...');
     const editorPath = process.env.UNITY_EDITOR_PATH;
     const version = process.env.UNITY_EDITOR_VERSION || editorPath.match(/(\d+\.\d+\.\d+[a-z]?\d?)/)[0];
     core.debug(`Unity Editor Path: ${editorPath}`);
@@ -28729,7 +28711,7 @@ async function getLicensingClient() {
     await fs.access(editorPath, fs.constants.X_OK);
     let licenseClientPath;
     const major = version.split('.')[0];
-    // if 2019.3 or older, use unity editor hub licensing client
+    // if 2019.3 or older, use unity hub licensing client
     if (major < 2020) {
         const unityHubPath = process.env.UNITY_HUB_PATH || process.env.HOME;
         core.debug(`Unity Hub Path: ${unityHubPath}`);
@@ -28739,14 +28721,14 @@ async function getLicensingClient() {
         // ~/Applications/Unity\ Hub.AppImage/UnityLicensingClient_V1
         const rootHubPath = await GetHubRootPath(unityHubPath);
         const globs = [rootHubPath, '**'];
-        if (platform === 'win32') {
+        if (process.platform === 'win32') {
             globs.push('Unity.Licensing.Client.exe');
         } else {
             globs.push('Unity.Licensing.Client');
         }
         licenseClientPath = await ResolveGlobPath(globs);
         core.debug(`Unity Licensing Client Path: ${licenseClientPath}`);
-        await fs.access(licenseClientPath, fs.constants.R_OK);
+        await fs.access(licenseClientPath, fs.constants.X_OK);
         return licenseClientPath;
     }
     else {
@@ -28756,37 +28738,38 @@ async function getLicensingClient() {
         // Linux: <UnityEditorDir>/Data/Resources/Licensing/Client/
         const rootEditorPath = await GetEditorRootPath(editorPath);
         core.debug(`Root Editor Path: ${rootEditorPath}`);
-        const globs = [rootEditorPath, '**'];
-        if (platform === 'win32') {
-            globs.push('Unity.Licensing.Client.exe');
-        } else {
-            globs.push('Unity.Licensing.Client');
+        const globs = [rootEditorPath];
+        switch (process.platform) {
+            case 'win32':
+                globs.push('Data\\Resources\\Licensing\\Client\\Unity.Licensing.Client.exe');
+                break;
+            case 'darwin':
+                globs.push('Contents', 'Frameworks', 'UnityLicensingClient.app', '**', 'Unity.Licensing.Client');
+                break;
+            case 'linux':
+                globs.push('Data', 'Resources', 'Licensing', 'Client', 'Unity.Licensing.Client');
         }
-        licenseClientPath = await ResolveGlobPath(globs);
+        try {
+            licenseClientPath = path.resolve(...globs);
+            core.debug(`Testing Unity Licensing Client Path: ${licenseClientPath}`);
+            await fs.access(licenseClientPath, fs.constants.R_OK);
+        } catch (error) {
+            licenseClientPath = await ResolveGlobPath(globs);
+        }
         core.debug(`Unity Licensing Client Path: ${licenseClientPath}`);
-        await fs.access(licenseClientPath, fs.constants.R_OK);
+        await fs.access(licenseClientPath, fs.constants.X_OK);
         return licenseClientPath;
     }
 };
 
-function maskSerialInOutput(output) {
-    return output.replace(/([\w-]+-XXXX)/g, (_, serial) => {
-        const maskedSerial = serial.slice(0, -4) + `XXXX`;
-        core.setSecret(maskedSerial);
-        return serial;
-    });
-};
-
-let client = undefined;
-
 async function execWithMask(args) {
+    if (!client) {
+        client = await getLicensingClient();
+    }
+    await fs.access(client, fs.constants.X_OK);
     let output = '';
     let exitCode = 0;
     try {
-        if (client == undefined) {
-            client = await getLicensingClient();
-        }
-        await fs.access(client, fs.constants.X_OK);
         core.info(`[command]"${client}" ${args.join(' ')}`);
         exitCode = await exec.exec(`"${client}"`, args, {
             silent: true,
@@ -28799,108 +28782,141 @@ async function execWithMask(args) {
                 }
             }
         });
-
     } finally {
         const maskedOutput = maskSerialInOutput(output);
+        const splitLines = maskedOutput.split(/\r?\n/);
+        for (const line of splitLines) {
+            if (line === undefined || line.length === 0) { continue; }
+            core.info(line);
+        }
         if (exitCode !== 0) {
-            throw Error(maskedOutput);
-        } else {
-            core.info(maskedOutput);
+            throw Error(getExitCodeMessage(exitCode));
         }
     }
+    return output;
 };
 
-const licensePaths = {
-    win32: [
-        path.join(process.env.PROGRAMDATA || '', 'Unity'),
-        path.join(process.env.LOCALAPPDATA || '', 'Unity', 'licenses')
-    ],
-    darwin: [
-        path.join('/Library', 'Application Support', 'Unity') || '/Library/Application Support/Unity',
-        path.join('/Library', 'Unity', 'licenses' || 0)
-    ],
-    linux: [
-        path.join(process.env.HOME || '', '.local/share/unity3d/Unity'),
-        path.join(process.env.HOME || '', '.config/unity3d/Unity/licenses')
-    ]
+function maskSerialInOutput(output) {
+    return output.replace(/([\w-]+-XXXX)/g, (_, serial) => {
+        const maskedSerial = serial.slice(0, -4) + `XXXX`;
+        core.setSecret(maskedSerial);
+        return serial;
+    });
 };
 
-async function CheckExistingLicense() {
-    core.info('Checking for existing Unity License activation...');
-    const paths = licensePaths[platform];
-    core.debug(`License paths: ${paths}`);
-    if (!paths || paths.length < 2) {
-        core.debug(`No license paths configured for platform: ${platform}`);
-        return false;
+function getExitCodeMessage(exitCode) {
+    switch (exitCode) {
+        case 0:
+            return 'OK';
+        case 1:
+            return 'Invalid arguments';
+        case 2:
+            return 'Invalid credentials';
+        case 3:
+            return 'Organization ID is missing';
+        case 4:
+            return 'Package Access Control List file download failed';
+        case 5:
+            return 'Context initialization failed';
+        case 6:
+            return 'Replication service initialization failed';
+        case 7:
+            return 'Orchestrator initialization failed';
+        case 8:
+            return 'Floating service initialization failed';
+        case 9:
+            return 'Package service initialization failed';
+        case 10:
+            return 'Access token initialization failed';
+        case 11:
+            return 'Multi client pipe server start failed';
+        case 12:
+            return 'License activation generation failed';
+        case 13:
+            return 'Syncing entitlements failed';
+        case 14:
+            return 'No valid entitlement found';
+        case 15:
+            return 'License update failed';
+        case 16:
+            return 'Unable to get list of user seats';
+        case 17:
+            return 'Seat activation or deactivation failed';
+        case 18:
+            return 'Getting entitlements failed';
+        case 19:
+            return 'Acquiring license failed';
+        case 20:
+            return 'Renewing floating lease failed';
+        case 21:
+            return 'Returning floating lease failed';
+        default:
+            return 'Unknown error';
     }
-    const [ulfDir, licensesDir] = paths.filter(Boolean);
-    if (!ulfDir) {
-        core.debug(`ULF Directory is not defined for ${platform}`);
-        return false;
-    }
-    if (!licensesDir) {
-        core.debug(`Licenses Directory is not defined for ${platform}`);
-        return false;
-    }
-    core.debug(`ULF Directory: ${ulfDir}`);
-    core.debug(`Licenses Directory: ${licensesDir}`);
-    if (platform === 'darwin' && !fsSync.existsSync(ulfDir)) {
-        core.debug(`Creating Unity license directory: ${ulfDir}`);
-        await fs.mkdir(ulfDir, { recursive: true });
-        await fs.chmod(ulfDir, 0o777);
-    }
-    const ulfPath = path.join(ulfDir, 'Unity_lic.ulf');
-    core.debug(`ULF Path: ${ulfPath}`);
-
-    try {
-        if (fsSync.existsSync(ulfPath)) {
-            core.debug(`Found license file at path: ${ulfPath}`);
-            return true;
-        } else {
-            core.debug(`License file does not exist at path: ${ulfPath}`);
-        }
-    } catch (error) {
-        core.warning(`Error checking ulf path: ${error}`);
-    }
-
-    try {
-        if (fsSync.existsSync(licensesDir)) {
-            core.debug(`Found licenses directory: ${licensesDir}`);
-            return fsSync.readdirSync(licensesDir).some(f => f.endsWith('.xml'));
-        } else {
-            core.debug(`Licenses directory does not exist: ${licensesDir}`);
-        }
-    } catch (error) {
-        core.warning(`Error checking licenses directory: ${error.message}`);
-    }
-
-    return false;
 }
+
+const servicesPath = {
+    win32: path.join(process.env.PROGRAMDATA || '', 'Unity', 'config'),
+    darwin: path.join('/Library', 'Application Support', 'Unity', 'config'),
+    linux: path.join('/usr', 'share', 'unity3d', 'config')
+};
 
 async function Version() {
     await execWithMask([`--version`]);
 }
 
 async function ShowEntitlements() {
-    await execWithMask([`--showEntitlements`]);
+    const output = await execWithMask([`--showEntitlements`]);
+    const matches = output.matchAll(/Product Name: (?<license>.+)/g);
+    const licenses = [];
+    if (!matches || matches.length === 0) {
+        return undefined;
+    }
+    for (const match of matches) {
+        if (match.groups.license) {
+            switch (match.groups.license) {
+                case 'Unity Pro':
+                    if (!licenses.includes('professional')) {
+                        licenses.push('professional');
+                    }
+                    break;
+                case 'Unity Personal':
+                    if (!licenses.includes('personal')) {
+                        licenses.push('personal');
+                    }
+                    break;
+            }
+        }
+    }
+    return licenses;
 }
 
 async function ActivateLicense(username, password, serial) {
     let args = [`--activate-ulf`, `--username`, username, `--password`, password];
     if (serial !== undefined && serial.length > 0) {
-        args.push([`--serial`, `"${serial}"`]);
+        args.push(`--serial`, serial);
         const maskedSerial = serial.slice(0, -4) + `XXXX`;
         core.setSecret(maskedSerial);
     }
     await execWithMask(args);
 }
 
-async function ReturnLicense() {
-    await execWithMask([`--return-ulf`]);
-    await ShowEntitlements();
+async function ActivateLicenseWithConfig(servicesConfig) {
+    const servicesConfigPath = path.join(servicesPath[process.platform], 'services-config.json');
+    core.debug(`Services Config Path: ${servicesConfigPath}`);
+    await fs.writeFile(servicesConfigPath, Buffer.from(servicesConfig, 'base64'));
 }
 
-module.exports = { CheckExistingLicense, Version, ShowEntitlements, ActivateLicense, ReturnLicense };
+async function ReturnLicense(license) {
+    await execWithMask([`--return-ulf`]);
+    const activeLicenses = await ShowEntitlements();
+    if (license !== undefined &&
+        activeLicenses.includes(license.toLowerCase())) {
+        throw Error(`${license} was not returned.`);
+    }
+}
+
+module.exports = { Version, ShowEntitlements, ActivateLicense, ActivateLicenseWithConfig, ReturnLicense };
 
 
 /***/ }),
@@ -28935,13 +28951,13 @@ async function GetEditorRootPath(editorPath) {
     let editorRootPath = editorPath;
     switch (process.platform) {
         case 'darwin':
-            editorRootPath = path.join(editorPath, '../../../../');
+            editorRootPath = path.join(editorPath, '../../../');
             break;
         case 'win32':
-            editorRootPath = path.join(editorPath, '../../');
+            editorRootPath = path.join(editorPath, '../');
             break
         case 'linux':
-            editorRootPath = path.join(editorPath, '../../');
+            editorRootPath = path.join(editorPath, '../');
             break;
     }
     await fs.access(editorRootPath, fs.constants.R_OK);
@@ -28949,26 +28965,22 @@ async function GetEditorRootPath(editorPath) {
     return editorRootPath;
 }
 
-async function ResolveGlobPath(globPath) {
-    try {
-        if (Array.isArray(globPath)) {
-            globPath = path.join(...globPath);
-        }
-        core.debug(`globPath: ${globPath}`);
-        globPath = path.normalize(globPath);
-        core.debug(`normalized globPath: ${globPath}`);
-        const globber = await glob.create(globPath);
-        const globPaths = await globber.glob();
-        core.debug(`globPaths: ${globPaths}`);
-        const result = globPaths[0];
-        if (!result || globPaths.length === 0) {
-            throw new Error(`Failed to resolve ${globPath}\n  > ${globPaths}`);
-        }
-        await fs.access(result, fs.constants.R_OK);
-        core.debug(`result:\n  > "${result}"`);
-        return result;
-    } catch (error) {
-        throw error;
+async function ResolveGlobPath(globs) {
+    const globPath = path.join(...globs);
+    const result = await findGlobPattern(globPath);
+    if (result === undefined) {
+        throw Error(`Failed to resolve glob: ${globPath}`);
+    }
+    await fs.access(result, fs.constants.R_OK);
+    return result;
+}
+
+async function findGlobPattern(pattern) {
+    core.debug(`searching for: ${pattern}...`);
+    const globber = await glob.create(pattern);
+    for await (const file of globber.globGenerator()) {
+        core.debug(`found glob: ${file}`);
+        return file;
     }
 }
 

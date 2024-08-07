@@ -22,8 +22,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-latest, macos-latest ]
-        unity_versions:
+        os: [ ubuntu-latest, windows-latest, macos-latest, macos-13 ]
+        unity-versions:
           - 2019.4.40f1 (ffc62b691db5)
           - 2020.3.48f1 (b805b124c6b7)
           - 2021.3.41f1 (6c5a9e20c022)
@@ -31,13 +31,13 @@ jobs:
           - 6000.0.13f1 (53a692e3fca9)
         include:
           - os: ubuntu-latest
-            build_targets: StandaloneLinux64
+            build-targets: StandaloneLinux64
           - os: windows-latest
-            build_targets: StandaloneWindows64
+            build-targets: StandaloneWindows64
           - os: macos-13
-            build_targets: StandaloneOSX
+            build-targets: StandaloneOSX
           - os: macos-latest
-            build_targets: StandaloneOSX
+            build-targets: StandaloneOSX
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
@@ -46,8 +46,8 @@ jobs:
           path: com.utilities.buildpipline
       - uses: RageAgainstThePixel/unity-setup@v1
         with:
-          unity_version: ${{ matrix.unity_versions }}
-          build_targets: ${{ matrix.build_targets }}
+          unity-version: ${{ matrix.unity-versions }}
+          build-targets: ${{ matrix.build-targets }}
       - uses: ./ # RageAgainstThePixel/action-activate-unity-license
         with:
           license: Personal
