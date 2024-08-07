@@ -1,6 +1,6 @@
 # activate-unity-license
 
-A GitHub Action for activating a [Unity Game Engine](https://unity.com) license on GitHub Action Runners.
+A GitHub Action to activate a [Unity Game Engine](https://unity.com) license for CI/CD workflows.
 
 ## How to use
 
