@@ -31,7 +31,7 @@ This action requires several secrets that need to be setup in the repository or 
 | `username` | The email address you use for your Unity Id | Required for `Personal` and `Professional` license activations |
 | `password` | The password you use for Unity Id access | Required for `Personal` and `Professional` license activations |
 | `serial` | The Serial number for the seat | Required for `Professional` license activations |
-| `configuration` | Unity License Client `services-config.json` encoded base base64 string | Required for `Floating` license activations |
+| `configuration` | Unity License Client `services-config.json` encoded as base64 string | Required for `Floating` license activations |
 
 ### workflow
 
