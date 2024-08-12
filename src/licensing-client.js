@@ -1,4 +1,4 @@
-const { ResolveGlobPath, GetEditorRootPath, GetHubRootPath } = require('./utility');
+const { ResolveGlobPath, GetHubRootPath } = require('./utility');
 const core = require('@actions/core');
 const exec = require('@actions/exec');
 const fs = require("fs").promises;
@@ -8,63 +8,24 @@ let client = undefined;
 
 async function getLicensingClient() {
     core.debug('Getting Licensing Client...');
-    const editorPath = process.env.UNITY_EDITOR_PATH;
-    const version = process.env.UNITY_EDITOR_VERSION || editorPath.match(/(\d+\.\d+\.\d+[a-z]?\d?)/)[0];
-    core.debug(`Unity Editor Path: ${editorPath}`);
-    core.debug(`Unity Version: ${version}`);
-    await fs.access(editorPath, fs.constants.X_OK);
-    let licenseClientPath;
-    const major = version.split('.')[0];
-    // if 2019.3 or older, use unity hub licensing client
-    if (major < 2020) {
-        const unityHubPath = process.env.UNITY_HUB_PATH || process.env.HOME;
-        core.debug(`Unity Hub Path: ${unityHubPath}`);
-        await fs.access(unityHubPath, fs.constants.R_OK);
-        // C:\Program Files\Unity Hub\UnityLicensingClient_V1
-        // /Applications/Unity\ Hub.app/Contents/MacOS/Unity\ Hub/UnityLicensingClient_V1
-        // ~/Applications/Unity\ Hub.AppImage/UnityLicensingClient_V1
-        const rootHubPath = await GetHubRootPath(unityHubPath);
-        const globs = [rootHubPath, '**'];
-        if (process.platform === 'win32') {
-            globs.push('Unity.Licensing.Client.exe');
-        } else {
-            globs.push('Unity.Licensing.Client');
-        }
-        licenseClientPath = await ResolveGlobPath(globs);
-        core.debug(`Unity Licensing Client Path: ${licenseClientPath}`);
-        await fs.access(licenseClientPath, fs.constants.X_OK);
-        return licenseClientPath;
+    const unityHubPath = process.env.UNITY_HUB_PATH || process.env.HOME;
+    core.debug(`Unity Hub Path: ${unityHubPath}`);
+    await fs.access(unityHubPath, fs.constants.R_OK);
+    // C:\Program Files\Unity Hub\UnityLicensingClient_V1
+    // /Applications/Unity\ Hub.app/Contents/MacOS/Unity\ Hub/UnityLicensingClient_V1
+    // ~/Applications/Unity\ Hub.AppImage/UnityLicensingClient_V1
+    const rootHubPath = await GetHubRootPath(unityHubPath);
+    const globs = [rootHubPath, '**'];
+    if (process.platform === 'win32') {
+        globs.push('Unity.Licensing.Client.exe');
+    } else {
+        globs.push('Unity.Licensing.Client');
     }
-    else {
-        // Windows: <UnityEditorDir>\Data\Resources\Licensing\Client
-        // macOS (Editor versions 2021.3.19f1 or later): <UnityEditorDir>/Contents/Frameworks/UnityLicensingClient.app/Contents/MacOS/
-        // macOS (Editor versions earlier than 2021.3.19f1): <UnityEditorDir>/Contents/Frameworks/UnityLicensingClient.app/Contents/Resources/
-        // Linux: <UnityEditorDir>/Data/Resources/Licensing/Client/
-        const rootEditorPath = await GetEditorRootPath(editorPath);
-        core.debug(`Root Editor Path: ${rootEditorPath}`);
-        const globs = [rootEditorPath];
-        switch (process.platform) {
-            case 'win32':
-                globs.push('Data\\Resources\\Licensing\\Client\\Unity.Licensing.Client.exe');
-                break;
-            case 'darwin':
-                globs.push('Contents', 'Frameworks', 'UnityLicensingClient.app', '**', 'Unity.Licensing.Client');
-                break;
-            case 'linux':
-                globs.push('Data', 'Resources', 'Licensing', 'Client', 'Unity.Licensing.Client');
-        }
-        try {
-            licenseClientPath = path.resolve(...globs);
-            core.debug(`Testing Unity Licensing Client Path: ${licenseClientPath}`);
-            await fs.access(licenseClientPath, fs.constants.R_OK);
-        } catch (error) {
-            licenseClientPath = await ResolveGlobPath(globs);
-        }
-        core.debug(`Unity Licensing Client Path: ${licenseClientPath}`);
-        await fs.access(licenseClientPath, fs.constants.X_OK);
-        return licenseClientPath;
-    }
-};
+    const licenseClientPath = await ResolveGlobPath(globs);
+    core.debug(`Unity Licensing Client Path: ${licenseClientPath}`);
+    await fs.access(licenseClientPath, fs.constants.X_OK);
+    return licenseClientPath;
+}
 
 async function execWithMask(args) {
     if (!client) {
@@ -76,7 +37,6 @@ async function execWithMask(args) {
     try {
         core.info(`[command]"${client}" ${args.join(' ')}`);
         exitCode = await exec.exec(`"${client}"`, args, {
-            silent: true,
             listeners: {
                 stdout: (data) => {
                     output += data.toString();
@@ -84,7 +44,9 @@ async function execWithMask(args) {
                 stderr: (data) => {
                     output += data.toString();
                 }
-            }
+            },
+            silent: true,
+            ignoreReturnCode: true
         });
     } finally {
         const maskedOutput = maskSerialInOutput(output);
@@ -98,7 +60,7 @@ async function execWithMask(args) {
         }
     }
     return output;
-};
+}
 
 function maskSerialInOutput(output) {
     return output.replace(/([\w-]+-XXXX)/g, (_, serial) => {
@@ -106,7 +68,7 @@ function maskSerialInOutput(output) {
         core.setSecret(maskedSerial);
         return serial;
     });
-};
+}
 
 function getExitCodeMessage(exitCode) {
     switch (exitCode) {
@@ -163,7 +125,7 @@ const servicesPath = {
     win32: path.join(process.env.PROGRAMDATA || '', 'Unity', 'config'),
     darwin: path.join('/Library', 'Application Support', 'Unity', 'config'),
     linux: path.join('/usr', 'share', 'unity3d', 'config')
-};
+}
 
 async function Version() {
     await execWithMask([`--version`]);
@@ -220,4 +182,4 @@ async function ReturnLicense(license) {
     }
 }
 
-module.exports = { Version, ShowEntitlements, ActivateLicense, ActivateLicenseWithConfig, ReturnLicense };
+module.exports = { Version, ShowEntitlements, ActivateLicense, ActivateLicenseWithConfig, ReturnLicense }

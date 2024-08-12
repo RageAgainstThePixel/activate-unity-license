@@ -1,5 +1,5 @@
 name: activate-unity-license
-description: 'A GitHub Action to activate a Unity Game Engine license for CI/CD workflows.'
+description: A GitHub Action to activate a Unity Game Engine license for CI/CD workflows.
 inputs:
   license:
     description: 'Must be one of `Personal`, `Professional`, `Floating`.'
