@@ -1,6 +1,6 @@
 {
   "name": "activate-unity-license",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "A GitHub Action to activate a Unity Game Engine license for CI/CD workflows.",
   "author": "RageAgainstThePixel",
   "license": "MIT",
