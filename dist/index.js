@@ -28242,7 +28242,7 @@ async function getLicensingClient() {
     await fs.promises.access(licenseClientPath, fs.constants.X_OK);
     return licenseClientPath;
 }
-async function execWithMask(args, attempt = null) {
+async function execWithMask(args, attempt = 0) {
     if (!client) {
         client = await getLicensingClient();
     }
@@ -28274,9 +28274,6 @@ async function execWithMask(args, attempt = null) {
             core.info(line);
         }
         if (exitCode !== 0) {
-            if (attempt === null) {
-                attempt = 0;
-            }
             if (exitCode > 21 && attempt < 3) {
                 core.error(`Unity Licensing Client failed with exit code ${exitCode}. Retrying...`);
                 return await execWithMask(args, ++attempt);
@@ -28406,8 +28403,9 @@ async function ReturnLicense(license) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ResolveGlobPath = ResolveGlobPath;
 exports.GetHubRootPath = GetHubRootPath;
+exports.ResolveGlobPath = ResolveGlobPath;
+exports.findGlobPattern = findGlobPattern;
 const core = __nccwpck_require__(2186);
 const glob = __nccwpck_require__(8090);
 const path = __nccwpck_require__(1017);
