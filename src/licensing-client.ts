@@ -4,6 +4,7 @@ import exec = require('@actions/exec');
 import path = require('path');
 import fs = require('fs');
 import os = require('os');
+import tmp = require('tmp');
 
 let client = undefined;
 
@@ -48,7 +49,7 @@ export async function PatchLicenseVersion() {
         client = await getLicensingClient();
     }
     const clientDirectory = path.dirname(client);
-    const patchedDirectory = path.join(os.tmpdir(), `UnityLicensingClient-${licenseVersion.replace('.', '_')}`);
+    const patchedDirectory = tmp.dirSync({ prefix: `UnityLicensingClient-${licenseVersion.replace('.', '_')}-` }).name;
     if (await fs.promises.mkdir(patchedDirectory, { recursive: true }) === undefined) {
         core.debug('Unity Licensing Client was already patched, reusing')
     } else {
@@ -56,7 +57,8 @@ export async function PatchLicenseVersion() {
         for (const fileName of await fs.promises.readdir(clientDirectory)) {
             if (fileName === 'Unity.Licensing.EntitlementResolver.dll') {
                 await patchBinary(
-                    path.join(clientDirectory, fileName), path.join(patchedDirectory, fileName),
+                    path.join(clientDirectory, fileName),
+                    path.join(patchedDirectory, fileName),
                     Buffer.from('6.x', 'utf16le'),
                     Buffer.from(licenseVersion, 'utf16le'),
                 );

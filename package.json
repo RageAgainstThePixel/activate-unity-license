@@ -23,10 +23,12 @@
   "dependencies": {
     "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
-    "@actions/glob": "^0.4.0"
+    "@actions/glob": "^0.4.0",
+    "tmp": "^0.2.3"
   },
   "devDependencies": {
     "@types/node": "^22.16.3",
+    "@types/tmp": "^0.2.6",
     "@vercel/ncc": "^0.34.0",
     "shx": "^0.3.4",
     "typescript": "^5.8.3"
