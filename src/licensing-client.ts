@@ -4,7 +4,6 @@ import exec = require('@actions/exec');
 import path = require('path');
 import fs = require('fs');
 import os = require('os');
-import tmp = require('tmp');
 
 let client = undefined;
 
@@ -44,6 +43,9 @@ export async function PatchLicenseVersion() {
                     case '5':
                         licenseVersion = '5.x';
                         break;
+                    default:
+                        licenseVersion = '6.x'; // default to 6.x for any other
+                        break;
                 }
             }
         }
@@ -59,7 +61,7 @@ export async function PatchLicenseVersion() {
         client = await getLicensingClient();
     }
     const clientDirectory = path.dirname(client);
-    const patchedDirectory = tmp.dirSync({ prefix: `UnityLicensingClient-${licenseVersion.replace('.', '_')}`, keep: true }).name;
+    const patchedDirectory = path.join(os.tmpdir(), `UnityLicensingClient-${licenseVersion.replace('.', '_')}`);
     if (await fs.promises.mkdir(patchedDirectory, { recursive: true }) === undefined) {
         core.debug('Unity Licensing Client was already patched, reusing')
     } else {
