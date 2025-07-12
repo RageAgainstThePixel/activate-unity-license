@@ -53,7 +53,7 @@ export async function PatchLicenseVersion() {
     if (licenseVersion === '6.x') {
         return;
     }
-    if (licenseVersion !== '5.x') {
+    if (licenseVersion !== '5.x' && licenseVersion !== '4.x') {
         core.debug(`Specified license version '${licenseVersion}' is unsupported, skipping`);
         return;
     }
