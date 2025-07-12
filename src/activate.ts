@@ -3,6 +3,7 @@ import { env } from 'process';
 import {
     ActivateLicense,
     ActivateLicenseWithConfig,
+    PatchLicenseVersion,
     ShowEntitlements,
     Version,
 } from './licensing-client';

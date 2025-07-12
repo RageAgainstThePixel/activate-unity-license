@@ -3,7 +3,7 @@ on:
   schedule:
     - cron: '0 0 * * 0' # Run every Sunday at midnight
   push:
-    branches: ['main']
+    branches: [main]
   pull_request:
     branches: ['*']
   # Allows you to run this workflow manually from the Actions tab
@@ -25,26 +25,23 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        unity-versions: [2019.x, 2020.x, 2021.x, 2022.x, 6000.x]
-        include:
+        unity-versions: ['5.6.7f1 (e80cc3114ac1)', 2019.x, 2020.x, 2021.x, 2022.x, 6000.x]
+        exclude:
           - os: ubuntu-latest
-            build-targets: StandaloneLinux64
-          - os: windows-latest
-            build-targets: StandaloneWindows64
-          - os: macos-latest
-            build-targets: StandaloneOSX
+            unity-versions: '5.6.7f1 (e80cc3114ac1)'
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
+      - uses: RageAgainstThePixel/unity-setup@development
         with:
-          repository: RageAgainstThePixel/com.utilities.buildpipeine
-          path: com.utilities.buildpipline
-      - uses: RageAgainstThePixel/unity-setup@v1
-        with:
+          version-file: None
           unity-version: ${{ matrix.unity-versions }}
-          build-targets: ${{ matrix.build-targets }}
+          modules: None
       - uses: ./ # RageAgainstThePixel/action-activate-unity-license
         with:
           license: Personal
           username: ${{ secrets.UNITY_USERNAME }}
           password: ${{ secrets.UNITY_PASSWORD }}
+      - uses: RageAgainstThePixel/unity-action@v1
+        timeout-minutes: 10
+        with:
+          args: '-quit -nographics -batchmode -createProject "${{ github.workspace }}/Test Project"'
