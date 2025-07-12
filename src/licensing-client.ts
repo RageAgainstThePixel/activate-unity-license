@@ -59,7 +59,7 @@ export async function PatchLicenseVersion() {
         client = await getLicensingClient();
     }
     const clientDirectory = path.dirname(client);
-    const patchedDirectory = tmp.dirSync({ prefix: `UnityLicensingClient-${licenseVersion.replace('.', '_')}-` }).name;
+    const patchedDirectory = tmp.dirSync({ prefix: `UnityLicensingClient-${licenseVersion.replace('.', '_')}` }).name;
     if (await fs.promises.mkdir(patchedDirectory, { recursive: true }) === undefined) {
         core.debug('Unity Licensing Client was already patched, reusing')
     } else {
