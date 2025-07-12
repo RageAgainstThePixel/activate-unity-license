@@ -3,6 +3,7 @@ on:
   schedule:
     - cron: '0 0 * * 0' # Run every Sunday at midnight
   push:
+    branches: [main]
   pull_request:
     branches: ['*']
   # Allows you to run this workflow manually from the Actions tab
@@ -25,58 +26,22 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         unity-versions: ['5.6.7f1 (e80cc3114ac1)', 2019.x, 2020.x, 2021.x, 2022.x, 6000.x]
-        include:
-          - unity-versions: '5.6.7f1 (e80cc3114ac1)'
-            license-version: 5.x
+        exclude:
           - os: ubuntu-latest
             unity-versions: '5.6.7f1 (e80cc3114ac1)'
-            skip-editor: true # Unity 5.x doesn't have a (non-experimental) Linux build
     steps:
       - uses: actions/checkout@v4
-      - uses: RageAgainstThePixel/unity-setup@v1
+      - uses: RageAgainstThePixel/unity-setup@development
         with:
           version-file: None
-          unity-version: ${{ !matrix.skip-editor && matrix.unity-versions || 'None' }}
+          unity-version: ${{ matrix.unity-versions }}
           modules: None
       - uses: ./ # RageAgainstThePixel/action-activate-unity-license
         with:
           license: Personal
           username: ${{ secrets.UNITY_USERNAME }}
           password: ${{ secrets.UNITY_PASSWORD }}
-          license-version: ${{ matrix.license-version }}
-      - if: startsWith(matrix.os, 'ubuntu-') && !matrix.skip-editor
-        run: |
-          # Unity 2019.x
-          echo "deb https://archive.ubuntu.com/ubuntu jammy main universe" | sudo tee /etc/apt/sources.list.d/jammy.list
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y libgtk2.0-0 libglu1-mesa libgconf-2-4
-
-          # Unity 2019.x/2020.x
-          curl -LO https://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_amd64.deb
-          sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4_amd64.deb
-
-          # https://discussions.unity.com/t/linux-editor-stuck-on-loading-because-of-bee-backend-w-workaround/854480
-          UNITY_EDITOR_DATA_PATH="$(dirname "$UNITY_EDITOR_PATH")"/Data
-          if [[ -f "$UNITY_EDITOR_DATA_PATH"/bee_backend && ! -f "$UNITY_EDITOR_DATA_PATH"/.bee_backend ]]; then
-              mv "$UNITY_EDITOR_DATA_PATH"/{,.}bee_backend
-              cat >"$UNITY_EDITOR_DATA_PATH"/bee_backend <<'EOF'
-          #!/usr/bin/env bash
-          args=("$@")
-          for ((i = 0; i < "${#args[@]}"; ++i)); do
-              case ${args[i]} in
-              --stdin-canary)
-                  unset args[i]
-                  break
-                  ;;
-              esac
-          done
-          "$(dirname "$0")/.$(basename "$0")" "${args[@]}"
-          EOF
-              chmod +x "$UNITY_EDITOR_DATA_PATH"/bee_backend
-          fi
-
-      - if: ${{ !matrix.skip-editor }}
-        uses: RageAgainstThePixel/unity-action@v1
+      - uses: RageAgainstThePixel/unity-action@v1
         timeout-minutes: 10
         with:
           args: '-quit -nographics -batchmode -createProject "${{ github.workspace }}/Test Project"'

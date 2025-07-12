@@ -13,7 +13,6 @@ export async function Deactivate(): Promise<void> {
         }
         core.startGroup(`Unity License Deactivation...`);
         try {
-            await licensingClient.PatchLicenseVersion(core.getInput('license-version'));
             const activeLicenses = await licensingClient.ShowEntitlements();
             if (license !== undefined &&
                 !activeLicenses.includes(license.toLowerCase())) {

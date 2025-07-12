@@ -12,7 +12,6 @@ export async function Activate(): Promise<void> {
     let license = undefined;
     try {
         core.saveState('isPost', true);
-        await PatchLicenseVersion(core.getInput('license-version'));
         await Version();
         let activeLicenses = await ShowEntitlements();
         license = core.getInput('license', { required: true });
