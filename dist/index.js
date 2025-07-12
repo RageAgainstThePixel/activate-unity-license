@@ -29037,11 +29037,30 @@ async function getLicensingClient() {
     return licenseClientPath;
 }
 async function PatchLicenseVersion() {
-    const licenseVersion = core.getInput('license-version') || '6.x';
+    let licenseVersion = core.getInput('license-version');
+    if (!licenseVersion) {
+        const unityEditorPath = process.env['UNITY_EDITOR_PATH'];
+        if (unityEditorPath) {
+            const versionMatch = unityEditorPath.match(/(\d+)\.(\d+)\.(\d+)/);
+            if (!versionMatch) {
+                licenseVersion = '6.x';
+            }
+            else {
+                switch (versionMatch[1]) {
+                    case '4':
+                        licenseVersion = '4.x';
+                        break;
+                    case '5':
+                        licenseVersion = '5.x';
+                        break;
+                }
+            }
+        }
+    }
     if (licenseVersion === '6.x') {
         return;
     }
-    if (licenseVersion !== '5.x') {
+    if (licenseVersion !== '5.x' && licenseVersion !== '4.x') {
         core.debug(`Specified license version '${licenseVersion}' is unsupported, skipping`);
         return;
     }
@@ -29071,7 +29090,7 @@ async function PatchLicenseVersion() {
     client = path.join(patchedDirectory, path.basename(client));
     core.debug(`Unity Licensing Client patched successfully, new path: ${client}`);
     const unityCommonDir = getUnityCommonDir();
-    const legacyLicenseFile = path.join(unityCommonDir, 'Unity_v5.x.ulf');
+    const legacyLicenseFile = path.join(unityCommonDir, `Unity_v${licenseVersion}.ulf`);
     if (!fs.existsSync(legacyLicenseFile)) {
         await fs.promises.mkdir(unityCommonDir, { recursive: true });
         await fs.promises.symlink(path.join(patchedDirectory, 'Unity_lic.ulf'), legacyLicenseFile);
