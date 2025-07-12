@@ -31,7 +31,7 @@ jobs:
             unity-versions: '5.6.7f1 (e80cc3114ac1)'
     steps:
       - uses: actions/checkout@v4
-      - uses: RageAgainstThePixel/unity-setup@development
+      - uses: RageAgainstThePixel/unity-setup@v1
         with:
           version-file: None
           unity-version: ${{ matrix.unity-versions }}
