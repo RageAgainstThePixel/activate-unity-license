@@ -28302,9 +28302,18 @@ async function PatchLicenseVersion() {
     core.debug(`Unity Licensing Client patched successfully, new path: ${client}`);
     const unityCommonDir = getUnityCommonDir();
     const legacyLicenseFile = path.join(unityCommonDir, `Unity_v${licenseVersion}.ulf`);
-    if (!fs.existsSync(legacyLicenseFile)) {
-        await fs.promises.mkdir(unityCommonDir, { recursive: true });
+    await fs.promises.mkdir(unityCommonDir, { recursive: true });
+    try {
         await fs.promises.symlink(path.join(patchedDirectory, 'Unity_lic.ulf'), legacyLicenseFile);
+    }
+    catch (error) {
+        if (error && error.code === 'EEXIST') {
+            await fs.promises.unlink(legacyLicenseFile);
+            await fs.promises.symlink(path.join(patchedDirectory, 'Unity_lic.ulf'), legacyLicenseFile);
+        }
+        else {
+            throw error;
+        }
     }
     process.env['UNITY_COMMON_DIR'] = patchedDirectory;
 }
