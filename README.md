@@ -32,7 +32,7 @@ This action requires several secrets that need to be setup in the repository or 
 | `password` | The password you use for Unity Id access | Required for `Personal` and `Professional` license activations |
 | `serial` | The Serial number for the seat | Required for `Professional` license activations |
 | `configuration` | Unity License Client `services-config.json` encoded as base64 string | Required for `Floating` license activations |
-| `license-version` | Must be one of `4.x` (Unity 4.x), `5.x` (Unity 5.x), `6.x` (Unity 2017+) | Defaults to `6.x` |
+| `license-version` | `5.x` (Unity 5.x), `6.x` (Unity 2017+) | Defaults to `6.x` |
 
 ### workflow
 
