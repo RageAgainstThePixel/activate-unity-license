@@ -25,11 +25,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        unity-versions: ['4.7.2', '5.6.7f1 (e80cc3114ac1)', 2019.x, 2020.x, 2021.x, 2022.x, 6000.x]
+        unity-versions: ['5.6.7f1 (e80cc3114ac1)', 2019.x, 2020.x, 2021.x, 2022.x, 6000.x]
         exclude:
           - os: ubuntu-latest
             unity-versions: '5.6.7f1 (e80cc3114ac1)'
-          - os: ubuntu-latest
+        include:
+          - os: windows-latest
             unity-versions: '4.7.2'
     steps:
       - uses: actions/checkout@v4
