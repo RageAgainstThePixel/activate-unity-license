@@ -33433,7 +33433,7 @@ async function Activate() {
                 password = core.getInput('password', { required: false }).trim();
                 serial = core.getInput('serial');
                 if (!username) {
-                    const encodedUsername = process.env['UNITY_USERNAME_BASE64'];
+                    const encodedUsername = process.env.UNITY_USERNAME_BASE64;
                     if (!encodedUsername) {
                         throw Error('Username is required for Unity License Activation!');
                     }
@@ -33444,7 +33444,7 @@ async function Activate() {
                     throw Error('Username must be your Unity ID email address!');
                 }
                 if (!password) {
-                    const encodedPassword = process.env['UNITY_PASSWORD_BASE64'];
+                    const encodedPassword = process.env.UNITY_PASSWORD_BASE64;
                     if (!encodedPassword) {
                         throw Error('Password is required for Unity License Activation!');
                     }
