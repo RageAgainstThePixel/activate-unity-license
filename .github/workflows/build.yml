@@ -33,7 +33,7 @@ jobs:
           license: Personal
           username: ${{ secrets.UNITY_USERNAME }}
           password: ${{ secrets.UNITY_PASSWORD }}
-      - uses: RageAgainstThePixel/unity-action@v2
+      - uses: RageAgainstThePixel/unity-action@v3
         timeout-minutes: 10
         with:
           args: '-quit -nographics -batchmode -createProject "${{ github.workspace }}/Test Project"'
