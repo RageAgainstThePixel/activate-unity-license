@@ -36,4 +36,4 @@ jobs:
       - uses: RageAgainstThePixel/unity-action@v3
         timeout-minutes: 10
         with:
-          args: -quit -createProject "${{ github.workspace }}/Test Project"
+          args: -quit -nographics -createProject "${{ github.workspace }}/Test Project"
