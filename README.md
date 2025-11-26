@@ -17,9 +17,9 @@ https://docs.github.com/en/actions/managing-workflow-runs/approving-workflow-run
 
 This action requires several secrets that need to be setup in the repository or organization's action secret store.
 
-* `UNITY_USERNAME`: The email address you use for your Unity Id.
-* `UNITY_PASSWORD`: The password you use for Unity Id access.
-* `UNITY_SERIAL`: The Serial number for the seat.
+* `UNITY_USERNAME`: The ***email address*** you use for your Unity Id.
+* `UNITY_PASSWORD`: The ***password*** you use for Unity Id access.
+* `UNITY_SERIAL`: The ***Serial number*** for the seat.
 * `UNITY_SERVICES_CONFIG`: Unity License Client `services-config.json` encoded as base64 string.
 
 > [!IMPORTANT]
@@ -27,11 +27,11 @@ This action requires several secrets that need to be setup in the repository or 
 
 | name | description | required |
 | ---- | ----------- | -------- |
-| `license` | Must be one of `Personal`, `Professional`, or `Floating` | Defaults to `Personal` |
-| `username` | The email address you use for your Unity Id | Required for `Personal` and `Professional` license activations |
-| `password` | The password you use for Unity Id access | Required for `Personal` and `Professional` license activations |
-| `serial` | The Serial number for the seat | Required for `Professional` license activations |
-| `configuration` | Unity License Client `services-config.json` encoded as base64 string | Required for `Floating` license activations |
+| `license` | Must be one of `personal`, `professional`, or `floating`. | Defaults to `personal` |
+| `username` | The ***email address*** you use for your Unity Id | Required for `personal`, `professional` license activations |
+| `password` | The ***password*** you use for Unity Id access | Required for `personal` and `professional` license activations |
+| `serial` | The ***Serial number*** for the seat | Required for `professional` license activations, but not named seats. |
+| `configuration` | Unity License Client `services-config.json` encoded as base64 string | Required for `floating` license activations |
 | `license-version` | Must be one of `4.x` (Unity 4.x), `5.x` (Unity 5.x), `6.x` (Unity 2017+) | Defaults to `6.x` |
 
 ### workflow
