@@ -42652,6 +42652,12 @@ async function Deactivate() {
             core.error(`Failed to get license state!`);
             return;
         }
+        if (license !== unity_cli_1.LicenseType.floating &&
+            process.env.RUNNER_ENVIRONMENT === 'github-hosted' &&
+            (process.platform === 'darwin' || process.platform === 'linux')) {
+            core.info(`Skipping Unity ${license} License return on GitHub-hosted ${process.platform} runner.`);
+            return;
+        }
         const token = core.getState('activation-token');
         core.debug(`post state: ${license}`);
         core.info(`Unity ${license} License Deactivation...`);
@@ -54101,7 +54107,7 @@ minimatch.unescape = unescape_unescape;
 const external_node_module_namespaceObject = require("node:module");
 ;// CONCATENATED MODULE: ./node_modules/@electron/asar/lib/wrapped-fs.js
 
-const wrapped_fs_require = (0,external_node_module_namespaceObject.createRequire)("file:///C:/Dev/rage/buildpipeline/activate-unity-license/node_modules/@electron/asar/lib/wrapped-fs.js");
+const wrapped_fs_require = (0,external_node_module_namespaceObject.createRequire)("file:///D:/rage/activate-unity-license/node_modules/@electron/asar/lib/wrapped-fs.js");
 const wrapped_fs_fs = 'electron' in process.versions ? wrapped_fs_require('original-fs') : wrapped_fs_require('node:fs');
 const promisifiedMethods = [
     'lstat',
