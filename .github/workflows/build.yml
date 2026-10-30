@@ -12,6 +12,9 @@ on:
         required: true
       UNITY_PASSWORD:
         required: true
+      CI_TOKEN:
+        description: Keys the encrypted run license that macOS and Linux rows activate from.
+        required: false
 jobs:
   build:
     name: ${{ matrix.name }}
@@ -19,6 +22,8 @@ jobs:
       matrix: ${{ fromJSON(inputs.matrix) }}
       fail-fast: false
     runs-on: ${{ matrix.os }}
+    # a hung editor or licensing call must not hold the matrix
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
@@ -28,6 +33,44 @@ jobs:
           version-file: None
           unity-version: ${{ matrix.unity-version }}
           build-targets: ${{ matrix.build-target }}
+      # macOS and Linux runners all report the same machine identity to Unity, so the license the license job activated
+      # once for this run serves every macOS or Linux row; it arrives as an encrypted artifact and is never returned.
+      # Without it, the action signs in with the account. Windows runners are a new machine every job, so Windows rows
+      # sign in and return the license. 4.x and 5.x editors need their own license version, so they always sign in.
+      - name: Download run license
+        id: download-run-license
+        if: ${{ runner.os != 'Windows' && !startsWith(matrix.unity-version, '4.') && !startsWith(matrix.unity-version, '5.') }}
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: unity-license-${{ runner.os }}
+          path: ${{ runner.temp }}/unity-license
+      - name: Install run license
+        if: ${{ steps.download-run-license.outcome == 'success' }}
+        continue-on-error: true
+        shell: pwsh
+        env:
+          CI_TOKEN: ${{ secrets.CI_TOKEN }}
+        run: |
+          $license = npx --yes @rage-against-the-pixel/unity-cli@4 license-file-path
+          if ($LASTEXITCODE -ne 0) { throw 'Could not find the license file path' }
+          $dir = Join-Path $env:RUNNER_TEMP 'unity-license'
+          $decrypted = Join-Path $dir 'Unity_lic.ulf'
+          # the key never reaches a command line: openssl reads it from the environment
+          $env:LICENSE_KEY = "$($env:CI_TOKEN):$($env:GITHUB_RUN_ID)"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in (Join-Path $dir 'unity-license.enc') -out $decrypted -pass env:LICENSE_KEY
+          if ($LASTEXITCODE -ne 0) { throw 'Could not decrypt the run license' }
+          try {
+            New-Item -ItemType Directory -Force -Path (Split-Path $license) -ErrorAction Stop | Out-Null
+            Copy-Item $decrypted $license -Force -ErrorAction Stop
+          } catch {
+            # the macOS license lives under /Library, which only root can write
+            sudo mkdir -p (Split-Path $license)
+            sudo cp $decrypted $license
+            if ($LASTEXITCODE -ne 0) { throw 'Could not install the run license' }
+          } finally {
+            Remove-Item -Recurse -Force $dir
+          }
       - uses: ./ # RageAgainstThePixel/activate-unity-license
         with:
           license: Personal

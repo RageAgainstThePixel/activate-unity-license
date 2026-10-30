@@ -3530,6 +3530,59 @@ async function execSdkManager(sdkManagerPath, javaPath, args) {
 
 /***/ }),
 
+/***/ 8545:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TRANSIENT_FAILURE_MARKER = exports.LICENSE_EXHAUSTED_MARKER = void 0;
+exports.ClassifyFailure = ClassifyFailure;
+exports.ReportFailure = ReportFailure;
+const logging_1 = __nccwpck_require__(4486);
+/** Annotation title for a failure a later rerun can clear because a license seat was taken. */
+exports.LICENSE_EXHAUSTED_MARKER = 'unity-license-exhausted';
+/** Annotation title for a network or CDN failure a later rerun can clear. */
+exports.TRANSIENT_FAILURE_MARKER = 'unity-transient-failure';
+// only phrases that name a seat or activation limit: the licensing client's generic "seat activation failed" and
+// "acquiring license failed" also cover a wrong password or a revoked license, which a rerun would only repeat.
+// Literal alternations only, so matching stays linear on any message.
+const LICENSE_EXHAUSTED_PATTERN = /activations? limit|maximum number of activations|max activations|no free seats?|no available seats?|seat limit|0 free entitlements|sign-in rate limit/i;
+// a refused connection usually means a wrong host or port, which a rerun repeats, so it is not listed
+const TRANSIENT_PATTERN = /HTTP 5\d\d|Bad Gateway|Service Unavailable|Gateway Time-?out|ECONNRESET|ECONNABORTED|ETIMEDOUT|EAI_AGAIN|socket hang up/i;
+/**
+ * The marker for a failure a rerun after other jobs finish can clear, if the message names one.
+ * @param message The error message.
+ * @returns The marker, or undefined for a failure a rerun would repeat.
+ */
+function ClassifyFailure(message) {
+    if (LICENSE_EXHAUSTED_PATTERN.test(message)) {
+        return exports.LICENSE_EXHAUSTED_MARKER;
+    }
+    // Node reports a download cut off mid-stream with a bare "aborted"
+    if (TRANSIENT_PATTERN.test(message) || /^(Error: )?aborted$/.test(message.trim())) {
+        return exports.TRANSIENT_FAILURE_MARKER;
+    }
+    return undefined;
+}
+/**
+ * Logs a command failure. Failures a rerun can clear get a notice annotation titled with their marker, which the
+ * rerun workflow looks for; every failure is then logged as an error as before. The marker is a notice because GitHub
+ * keeps only 10 error annotations per step, and a step that already reported editor errors would drop it.
+ * @param error The error that ended the command.
+ */
+function ReportFailure(error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const marker = ClassifyFailure(message);
+    if (marker) {
+        logging_1.Logger.instance.annotate(logging_1.LogLevel.INFO, `Retryable failure: ${message}`, undefined, undefined, undefined, undefined, undefined, marker);
+    }
+    logging_1.Logger.instance.error(message);
+}
+//# sourceMappingURL=failure-markers.js.map
+
+/***/ }),
+
 /***/ 9644:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -44461,6 +44514,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Activate = Activate;
 const core = __nccwpck_require__(2186);
 const unity_cli_1 = __nccwpck_require__(4858);
+const failure_markers_1 = __nccwpck_require__(8545);
 async function Activate() {
     let licensingClient;
     let licenseType = undefined;
@@ -44543,6 +44597,11 @@ async function Activate() {
         core.info(`Unity ${licenseType} License Activated!`);
     }
     catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const marker = (0, failure_markers_1.ClassifyFailure)(message);
+        if (marker) {
+            core.notice(`Retryable failure: ${message}`, { title: marker });
+        }
         core.setFailed(`Unity License Activation Failed!\n${error}`);
         process.exit(1);
     }

@@ -3,6 +3,7 @@ import {
     LicenseType,
     LicensingClient,
 } from '@rage-against-the-pixel/unity-cli';
+import { ClassifyFailure } from '@rage-against-the-pixel/unity-cli/dist/failure-markers';
 
 export async function Activate(): Promise<void> {
     let licensingClient: LicensingClient;
@@ -116,6 +117,14 @@ export async function Activate(): Promise<void> {
 
         core.info(`Unity ${licenseType} License Activated!`);
     } catch (error) {
+        // a seat limit or network failure gets a notice titled with its marker, so a rerun workflow can retry it
+        const message = error instanceof Error ? error.message : String(error);
+        const marker = ClassifyFailure(message);
+
+        if (marker) {
+            core.notice(`Retryable failure: ${message}`, { title: marker });
+        }
+
         core.setFailed(`Unity License Activation Failed!\n${error}`);
         process.exit(1);
     }
