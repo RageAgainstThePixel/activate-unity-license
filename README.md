@@ -32,18 +32,37 @@ This action requires several secrets that need to be setup in the repository or 
 | `password` | The ***password*** you use for Unity Id access | Required for `personal` and `professional` license activations |
 | `serial` | The ***Serial number*** for the seat | Required for `professional` license activations, but not named seats. |
 | `configuration` | Unity License Client `services-config.json` path, raw json, or json encoded as base64 string. | Required for `floating` license activations |
-| `license-version` | Must be one of `4.x` (Unity 4.x), `5.x` (Unity 5.x), `6.x` (Unity 2017+) | Defaults to `6.x` |
+| `license-version` | ***Deprecated***, the license version is detected from the installed editor. | No |
+
+### license return
+
+The post step returns the license when the job ends, except on GitHub-hosted macOS and Linux runners. Those runners share one machine identity with Unity, so a return there revokes the license for every other job on that identity, other repositories' included.
+
+| runner | `personal` / `professional` | `floating` |
+| ------ | --------------------------- | ---------- |
+| GitHub-hosted Windows | returned | released |
+| GitHub-hosted macOS and Linux | ***not returned*** | released |
+| self-hosted | returned | released |
+
+### cached license file
+
+Set the `UNITY_LICENSE` environment variable to a `Unity_lic.ulf` path, its raw XML, or base64 to activate from a license file activated earlier on a machine with the same identity. The action signs in with the account when the file can't be used.
 
 ### workflow
 
 ```yaml
 steps:
-  - uses: RageAgainstThePixel/activate-unity-license@v2
+  - uses: RageAgainstThePixel/activate-unity-license@v3
     with:
       license: 'Personal' # Choose license type to use [ Personal, Professional, Floating ]
       username: ${{ secrets.UNITY_USERNAME }}
       password: ${{ secrets.UNITY_PASSWORD }}
       # serial: ${{ secrets.UNITY_SERIAL }} # Required for pro activations
       # configuration: ${{ secrets.UNITY_SERVICES_CONFIG }} # Required for floating license activations
-      # license-version: '6.x' # Optional, defaults to '6.x', can be set to '5.x' for Unity 5.x licenses
 ```
+
+### upgrading from v2
+
+* The license is no longer returned on GitHub-hosted macOS and Linux runners.
+* `license-version` is ignored; 4.x and 5.x licenses are detected from the editor installed by an earlier step.
+* Activation goes through the official Unity CLI first, then the Unity Licensing Client; Unity Hub is no longer required.
