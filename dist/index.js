@@ -3816,6 +3816,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LicensingClient = exports.LicenseType = void 0;
+exports.LicensingClientDiagnostic = LicensingClientDiagnostic;
 exports.GetLegacyLicenseVersion = GetLegacyLicenseVersion;
 exports.ActivateLicense = ActivateLicense;
 exports.IsSharedRunnerIdentity = IsSharedRunnerIdentity;
@@ -3843,6 +3844,21 @@ var LicenseType;
  */
 /** How long one Unity Licensing Client command may run. */
 const LICENSING_CLIENT_TIMEOUT_MS = 10 * 60 * 1000;
+// literal alternations only, so matching stays linear on any line
+const LICENSING_DIAGNOSTIC_PATTERN = /error|fail|seat|entitlement|activation|limit|denied|invalid|expired/i;
+/**
+ * The lines of sanitized licensing client output that say why a command failed, such as a seat limit.
+ * @param lines The client output, already sanitized.
+ * @returns At most the last 3 matching lines, each cut to 300 characters, or undefined when none match.
+ */
+function LicensingClientDiagnostic(lines) {
+    const matches = lines
+        .map(line => line.trim())
+        .filter(line => line.length > 0 && LICENSING_DIAGNOSTIC_PATTERN.test(line))
+        .slice(-3)
+        .map(line => line.length > 300 ? `${line.slice(0, 300)}...` : line);
+    return matches.length > 0 ? matches.join('\n') : undefined;
+}
 class LicensingClient {
     logger = logging_1.Logger.instance;
     licenseClientPath;
@@ -4434,11 +4450,10 @@ class LicensingClient {
                 this.logger.error(`Unity Licensing Client did not finish within ${LICENSING_CLIENT_TIMEOUT_MS / 60000} minutes. Its log: ${LicensingClient.ClientLogPath()}`);
                 await this.printClientLogProblems(logOffset, secrets);
             }
+            // any client output can carry emails and tokens, so it gets the same sanitizing as the client log
+            const maskedLines = this.maskSerialInOutput(output).split(/\r?\n/).map(line => LicensingClient.sanitizeLogLine(line, secrets));
             if (!silent || exitCode !== 0) {
-                // any client output can carry emails and tokens, so it gets the same sanitizing as the client log
-                const maskedOutput = this.maskSerialInOutput(output).split(/\r?\n/).map(line => LicensingClient.sanitizeLogLine(line, secrets)).join('\n');
-                const splitLines = maskedOutput.split(/\r?\n/);
-                for (const line of splitLines) {
+                for (const line of maskedLines) {
                     if (line === undefined || line.length === 0) {
                         continue;
                     }
@@ -4452,6 +4467,11 @@ class LicensingClient {
                 // failure be marked for a rerun once those jobs finish
                 if (/maximum same user attempt retry count/i.test(output)) {
                     message = 'Unity ID sign-in rate limit reached: too many sign-in attempts for this account';
+                }
+                // the client's own reason, such as a seat limit, lets the failure be classified; exit 17 alone does not say
+                const diagnostic = LicensingClientDiagnostic(maskedLines);
+                if (diagnostic) {
+                    message += `\n${diagnostic}`;
                 }
                 throw new Error(`License command failed with exit code ${exitCode}: ${message}`);
             }
@@ -6676,8 +6696,12 @@ class UnityCli {
      * @returns The licensing client executable, or undefined when the CLI does not report one.
      */
     async GetLicensingClientPath() {
-        // the first license command makes the CLI download the licensing client
-        await this.RunJson(['license', 'list']);
+        // license status makes the CLI download the licensing client; license list exits 3 (not signed in) before it
+        // does on a runner with no Hub or Unity ID session, so it cannot be used here
+        const status = await this.RunJson(['license', 'status']);
+        if (status.exitCode !== 0) {
+            this.logger.debug(`unity license status exited with code ${status.exitCode}, looking for the licensing client anyway`);
+        }
         const { envelope } = await this.RunJson(['doctor']);
         const components = envelope?.data?.externalComponents;
         const executableName = process.platform === 'win32' ? 'Unity.Licensing.Client.exe' : 'Unity.Licensing.Client';
@@ -7593,6 +7617,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UnityInstaller = void 0;
 exports.resolveEditorExecutable = resolveEditorExecutable;
+exports.moveMacInstalledItem = moveMacInstalledItem;
 exports.getExecutableArchitectures = getExecutableArchitectures;
 const fs = __importStar(__nccwpck_require__(7147));
 const os = __importStar(__nccwpck_require__(2037));
@@ -7603,6 +7628,7 @@ const logging_1 = __nccwpck_require__(4486);
 const unity_editor_1 = __nccwpck_require__(8944);
 const unity_version_1 = __nccwpck_require__(3331);
 const unity_cli_1 = __nccwpck_require__(7992);
+const process_tracker_1 = __nccwpck_require__(6375);
 const utilities_1 = __nccwpck_require__(9746);
 const unity_releases_api_1 = __nccwpck_require__(7278);
 /** Exit codes the official CLI documents as retryable: network, install locked and timeout. */
@@ -8087,9 +8113,11 @@ class UnityInstaller {
         }
         const destinationPath = path.join(targetPath, 'PlaybackEngines');
         await fs.promises.mkdir(destinationPath, { recursive: true });
+        // the parent too, since removing PlaybackEngines afterwards needs write permission on it
+        await claimMacInstalledItem(path.dirname(sourcePath), false);
+        await claimMacInstalledItem(sourcePath, true);
         for (const item of await fs.promises.readdir(sourcePath)) {
-            await fs.promises.rm(path.join(destinationPath, item), { recursive: true, force: true });
-            await fs.promises.cp(path.join(sourcePath, item), path.join(destinationPath, item), { recursive: true, verbatimSymlinks: true });
+            await moveMacInstalledItem(path.join(sourcePath, item), path.join(destinationPath, item));
         }
         await fs.promises.rm(sourcePath, { recursive: true, force: true });
     }
@@ -8103,14 +8131,16 @@ class UnityInstaller {
         }
         this.logger.debug(`Moving ${unityAppPath} to ${targetPath}...`);
         await fs.promises.mkdir(targetPath, { recursive: true });
+        // the folder itself, so its entries can be moved out; the Hub folder inside it is left as it is
+        await claimMacInstalledItem(unityAppPath, false);
         for (const item of await fs.promises.readdir(unityAppPath)) {
             // the editor install path itself lives in /Applications/Unity/Hub
             if (item === 'Hub') {
                 continue;
             }
-            const src = path.join(unityAppPath, item);
-            await fs.promises.cp(src, path.join(targetPath, item), { recursive: true, verbatimSymlinks: true });
-            await fs.promises.rm(src, { recursive: true, force: true });
+            const source = path.join(unityAppPath, item);
+            await claimMacInstalledItem(source, true);
+            await moveMacInstalledItem(source, path.join(targetPath, item));
         }
         await fs.promises.chmod(targetPath, 0o755);
     }
@@ -8473,6 +8503,55 @@ function resolveEditorExecutable(location) {
  */
 function tempInstallerPath(extension) {
     return path.join((0, utilities_1.GetTempDir)(), `unity-installer-${(0, crypto_1.randomUUID)()}${extension}`);
+}
+/**
+ * Gives the runner's user something a macOS package installed under /Applications/Unity. The installer runs as root,
+ * so its files are root-owned and cannot be moved or removed otherwise, such as PlaybackEngines/AndroidPlayer.
+ * @param source A path under /Applications/Unity, never one from a caller, since it runs as root.
+ * @param recursive Whether to claim everything below it too.
+ */
+async function claimMacInstalledItem(source, recursive) {
+    if (!(0, process_tracker_1.IsPathUnder)(source, path.join('/Applications', 'Unity'))) {
+        throw new Error(`Refusing to take ownership of ${source}`);
+    }
+    const { uid, gid } = os.userInfo();
+    // -h changes a symlink itself, so a broken one does not fail the walk
+    await (0, utilities_1.Exec)('sudo', ['chown', ...(recursive ? ['-R'] : []), '-h', `${uid}:${gid}`, source], { silent: true, showCommand: true });
+    await (0, utilities_1.Exec)('sudo', ['chmod', ...(recursive ? ['-R'] : []), 'u+w', source], { silent: true, showCommand: true });
+}
+/**
+ * Moves something a macOS package installed. Older editors ship symlinks whose targets are gone, such as 5.6's
+ * MonoDevelop.app, which fs.cp fails on, so links are moved or recreated as they are.
+ */
+async function moveMacInstalledItem(source, destination) {
+    await fs.promises.rm(destination, { recursive: true, force: true });
+    try {
+        await fs.promises.rename(source, destination);
+    }
+    catch (error) {
+        // the install path can be on another volume than /Applications
+        if (error.code !== 'EXDEV') {
+            throw error;
+        }
+        await copyKeepingSymlinks(source, destination);
+        await fs.promises.rm(source, { recursive: true, force: true });
+    }
+}
+async function copyKeepingSymlinks(source, destination) {
+    const stat = await fs.promises.lstat(source);
+    if (stat.isSymbolicLink()) {
+        await fs.promises.symlink(await fs.promises.readlink(source), destination);
+    }
+    else if (stat.isDirectory()) {
+        await fs.promises.mkdir(destination, { mode: stat.mode & 0o7777 });
+        for (const entry of await fs.promises.readdir(source)) {
+            await copyKeepingSymlinks(path.join(source, entry), path.join(destination, entry));
+        }
+    }
+    else {
+        await fs.promises.copyFile(source, destination);
+        await fs.promises.chmod(destination, stat.mode & 0o7777);
+    }
 }
 /**
  * Reads the CPU architectures of a macOS editor binary from its Mach-O header.
@@ -44579,7 +44658,6 @@ async function Activate() {
                 core.setSecret(serial);
             }
         }
-        await (0, unity_cli_1.PrintLicenseContext)();
         const token = await (0, unity_cli_1.ActivateLicense)({ licenseType, servicesConfig, serial, username, password });
         core.saveState('license', licenseType);
         if (token) {

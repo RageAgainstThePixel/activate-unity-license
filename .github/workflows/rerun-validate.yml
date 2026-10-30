@@ -10,7 +10,7 @@ jobs:
     permissions:
       actions: write
       checks: read
-    uses: RageAgainstThePixel/unity-cli/.github/workflows/rerun-marked-failures.yml@v4.0.0 # no floating v4 tag yet
+    uses: RageAgainstThePixel/unity-cli/.github/workflows/rerun-marked-failures.yml@v4.0.1 # no floating v4 tag yet
     with:
       run-id: ${{ github.event.workflow_run.id }}
       run-attempt: ${{ github.event.workflow_run.run_attempt }}

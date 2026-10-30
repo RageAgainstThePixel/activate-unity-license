@@ -2,7 +2,6 @@ import core = require('@actions/core');
 import {
     ActivateLicense,
     LicenseType,
-    PrintLicenseContext,
 } from '@rage-against-the-pixel/unity-cli';
 import { ClassifyFailure } from '@rage-against-the-pixel/unity-cli/dist/failure-markers';
 
@@ -96,9 +95,6 @@ export async function Activate(): Promise<void> {
             }
         }
 
-        // the Unity CLI's license status downloads the Unity Licensing Client, which the account fallback needs on a
-        // runner with no Hub, and logs the license context
-        await PrintLicenseContext();
         // tries a cached license file (UNITY_LICENSE) and the official Unity CLI before the Unity Licensing Client;
         // 4.x and 5.x editors are detected from the installed editor and use their own license version
         const token = await ActivateLicense({ licenseType, servicesConfig, serial, username, password });
