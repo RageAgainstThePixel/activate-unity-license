@@ -111,7 +111,8 @@ jobs:
       matrix: ${{ toJSON(matrix.jobs.matrix) }}
   license-cleanup:
     needs: [license, validate]
-    if: always()
+    # a failed run keeps its license for rerun-validate's retries, up to its last attempt; the artifact expires in a day
+    if: ${{ always() && (needs.validate.result == 'success' || github.run_attempt >= 3) }}
     runs-on: ubuntu-slim
     timeout-minutes: 5
     permissions:

@@ -44529,7 +44529,6 @@ async function Activate() {
             default:
                 throw Error(`Invalid License: ${licenseInput}! Must be one of: ${Object.values(unity_cli_1.LicenseType).join(', ')}`);
         }
-        core.saveState('license', licenseType);
         core.info('Attempting to activate Unity License...');
         let servicesConfig = undefined;
         let username = undefined;
@@ -44581,6 +44580,7 @@ async function Activate() {
             }
         }
         const token = await (0, unity_cli_1.ActivateLicense)({ licenseType, servicesConfig, serial, username, password });
+        core.saveState('license', licenseType);
         if (token) {
             core.saveState('activation-token', token);
         }
@@ -44613,7 +44613,7 @@ async function Deactivate() {
     try {
         const license = core.getState('license');
         if (!license) {
-            core.error(`Failed to get license state!`);
+            core.info('No license was activated, so there is nothing to return.');
             return;
         }
         const token = core.getState('activation-token');

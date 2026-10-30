@@ -9,7 +9,7 @@ export async function Deactivate(): Promise<void> {
         const license: LicenseType | undefined = core.getState('license') as LicenseType | undefined;
 
         if (!license) {
-            core.error(`Failed to get license state!`);
+            core.info('No license was activated, so there is nothing to return.');
             return;
         }
 

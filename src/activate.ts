@@ -22,7 +22,6 @@ export async function Activate(): Promise<void> {
                 throw Error(`Invalid License: ${licenseInput}! Must be one of: ${Object.values(LicenseType).join(', ')}`);
         }
 
-        core.saveState('license', licenseType);
         core.info('Attempting to activate Unity License...');
 
         let servicesConfig: string | undefined = undefined;
@@ -99,6 +98,8 @@ export async function Activate(): Promise<void> {
         // tries a cached license file (UNITY_LICENSE) and the official Unity CLI before the Unity Licensing Client;
         // 4.x and 5.x editors are detected from the installed editor and use their own license version
         const token = await ActivateLicense({ licenseType, servicesConfig, serial, username, password });
+        // saved only once activation succeeded, so a failed activation never returns a license it did not activate
+        core.saveState('license', licenseType);
 
         if (token) {
             core.saveState('activation-token', token);
