@@ -44594,6 +44594,7 @@ exports.Activate = Activate;
 const core = __nccwpck_require__(2186);
 const unity_cli_1 = __nccwpck_require__(4858);
 const failure_markers_1 = __nccwpck_require__(8545);
+const deactivate_1 = __nccwpck_require__(8146);
 async function Activate() {
     let licenseType = undefined;
     try {
@@ -44608,6 +44609,11 @@ async function Activate() {
             default:
                 throw Error(`Invalid License: ${licenseInput}! Must be one of: ${Object.values(unity_cli_1.LicenseType).join(', ')}`);
         }
+        const returnLicense = (core.getInput('return-license') || 'auto').trim().toLowerCase();
+        if (!['auto', 'always', 'never'].includes(returnLicense)) {
+            throw Error(`Invalid return-license: ${returnLicense}! Must be one of: auto, always, never`);
+        }
+        core.saveState('return-license', returnLicense);
         core.info('Attempting to activate Unity License...');
         let servicesConfig = undefined;
         let username = undefined;
@@ -44671,6 +44677,9 @@ async function Activate() {
         if (marker) {
             core.notice(`Retryable failure: ${message}`, { title: marker });
         }
+        if (marker === failure_markers_1.LICENSE_EXHAUSTED_MARKER && licenseType === unity_cli_1.LicenseType.professional) {
+            core.warning(`The Unity professional serial may have no free activations. ${deactivate_1.SEAT_FIX}`);
+        }
         core.setFailed(`Unity License Activation Failed!\n${error}`);
         process.exit(1);
     }
@@ -44685,23 +44694,36 @@ async function Activate() {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SEAT_FIX = void 0;
 exports.Deactivate = Deactivate;
 const core = __nccwpck_require__(2186);
 const unity_cli_1 = __nccwpck_require__(4858);
+exports.SEAT_FIX = 'Release it at https://id.unity.com under My Seats, or set `return-license: always`.';
 async function Deactivate() {
+    let license = undefined;
     try {
-        const license = core.getState('license');
+        license = core.getState('license');
         if (!license) {
             core.info('No license was activated, so there is nothing to return.');
             return;
         }
+        let when = (core.getState('return-license') || 'auto');
+        if (license === unity_cli_1.LicenseType.professional && when === 'auto') {
+            when = 'always';
+        }
+        if (license === unity_cli_1.LicenseType.professional && when === 'never') {
+            core.warning(`The Unity professional license was not returned, so it keeps holding a seat. ${exports.SEAT_FIX}`);
+        }
         const token = core.getState('activation-token');
-        core.debug(`post state: ${license}`);
+        core.debug(`post state: ${license}, return-license: ${when}`);
         core.info(`Unity ${license} License Deactivation...`);
-        await (0, unity_cli_1.ReturnLicense)(license, token || undefined);
+        await (0, unity_cli_1.ReturnLicense)(license, token || undefined, when);
     }
     catch (error) {
         core.error(`Failed to deactivate license!\n${error}`);
+        if (license === unity_cli_1.LicenseType.professional) {
+            core.warning(`The Unity professional license could not be returned, so it may keep holding a seat. ${exports.SEAT_FIX}`);
+        }
     }
     finally {
         process.exit(0);

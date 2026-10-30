@@ -3,7 +3,8 @@ import {
     ActivateLicense,
     LicenseType,
 } from '@rage-against-the-pixel/unity-cli';
-import { ClassifyFailure } from '@rage-against-the-pixel/unity-cli/dist/failure-markers';
+import { ClassifyFailure, LICENSE_EXHAUSTED_MARKER } from '@rage-against-the-pixel/unity-cli/dist/failure-markers';
+import { SEAT_FIX } from './deactivate';
 
 export async function Activate(): Promise<void> {
     let licenseType: LicenseType | undefined = undefined;
@@ -22,6 +23,13 @@ export async function Activate(): Promise<void> {
                 throw Error(`Invalid License: ${licenseInput}! Must be one of: ${Object.values(LicenseType).join(', ')}`);
         }
 
+        const returnLicense = (core.getInput('return-license') || 'auto').trim().toLowerCase();
+
+        if (!['auto', 'always', 'never'].includes(returnLicense)) {
+            throw Error(`Invalid return-license: ${returnLicense}! Must be one of: auto, always, never`);
+        }
+
+        core.saveState('return-license', returnLicense);
         core.info('Attempting to activate Unity License...');
 
         let servicesConfig: string | undefined = undefined;
@@ -113,6 +121,10 @@ export async function Activate(): Promise<void> {
 
         if (marker) {
             core.notice(`Retryable failure: ${message}`, { title: marker });
+        }
+
+        if (marker === LICENSE_EXHAUSTED_MARKER && licenseType === LicenseType.professional) {
+            core.warning(`The Unity professional serial may have no free activations. ${SEAT_FIX}`);
         }
 
         core.setFailed(`Unity License Activation Failed!\n${error}`);

@@ -32,17 +32,24 @@ This action requires several secrets that need to be setup in the repository or 
 | `password` | The ***password*** you use for Unity Id access | Required for `personal` and `professional` license activations |
 | `serial` | The ***Serial number*** for the seat | Required for `professional` license activations, but not named seats. |
 | `configuration` | Unity License Client `services-config.json` path, raw json, or json encoded as base64 string. | Required for `floating` license activations |
+| `return-license` | When the post step returns the license: `auto`, `always`, or `never`. | Defaults to `auto` |
 | `license-version` | ***Deprecated***, the license version is detected from the installed editor. | No |
 
 ### license return
 
-The post step returns the license when the job ends, except on GitHub-hosted macOS and Linux runners. Those runners share one machine identity with Unity, so a return there revokes the license for every other job on that identity, other repositories' included.
+With `return-license: auto`, the post step returns the license when the job ends, except a `personal` license on GitHub-hosted macOS and Linux runners. Those runners share one machine identity with Unity, so a return there revokes the license for every other job on that identity, other repositories' included.
 
-| runner | `personal` / `professional` | `floating` |
-| ------ | --------------------------- | ---------- |
-| GitHub-hosted Windows | returned | released |
-| GitHub-hosted macOS and Linux | ***not returned*** | released |
-| self-hosted | returned | released |
+| runner | `personal` | `professional` | `floating` |
+| ------ | ---------- | -------------- | ---------- |
+| GitHub-hosted Windows | returned | returned | released |
+| GitHub-hosted macOS and Linux | ***not returned*** | returned | released |
+| self-hosted | returned | returned | released |
+
+`always` returns the license on every runner, and `never` keeps it on every runner. Floating licenses always release their lease.
+
+### seat usage
+
+Each paid seat allows 2 activations, and every GitHub-hosted macOS job shares one machine identity, as does every Linux job. A `professional` license that isn't returned keeps holding one of those activations, and a runner image update can change the identity and orphan it. When activations run out, activation fails and the action warns. Release them at [id.unity.com](https://id.unity.com) under ***My Seats***.
 
 ### cached license file
 
@@ -63,6 +70,6 @@ steps:
 
 ### upgrading from v2
 
-* The license is no longer returned on GitHub-hosted macOS and Linux runners.
+* A `personal` license is no longer returned on GitHub-hosted macOS and Linux runners; use `return-license` to change it.
 * `license-version` is ignored; 4.x and 5.x licenses are detected from the editor installed by an earlier step.
 * Activation goes through the official Unity CLI first, then the Unity Licensing Client; Unity Hub is no longer required.
