@@ -44567,16 +44567,10 @@ async function Deactivate() {
             core.error(`Failed to get license state!`);
             return;
         }
-        if (license !== unity_cli_1.LicenseType.floating &&
-            process.env.RUNNER_ENVIRONMENT === 'github-hosted' &&
-            (process.platform === 'darwin' || process.platform === 'linux')) {
-            core.info(`Skipping Unity ${license} License return on GitHub-hosted ${process.platform} runner.`);
-            return;
-        }
         const token = core.getState('activation-token');
         core.debug(`post state: ${license}`);
         core.info(`Unity ${license} License Deactivation...`);
-        await new unity_cli_1.LicensingClient().Deactivate(license, token);
+        await (0, unity_cli_1.ReturnLicense)(license, token || undefined);
     }
     catch (error) {
         core.error(`Failed to deactivate license!\n${error}`);
