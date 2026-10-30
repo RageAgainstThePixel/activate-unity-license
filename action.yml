@@ -30,7 +30,8 @@ inputs:
     required: false
     default: ''
   license-version:
-    description: 'Must be one of `5.x` (Unity 5.x), `6.x` (Unity 2017+)'
+    description: 'Deprecated. The license version is detected from the installed editor.'
+    deprecationMessage: 'The license version is detected from the installed editor; remove the `license-version` input.'
     required: false
 runs:
   using: node24

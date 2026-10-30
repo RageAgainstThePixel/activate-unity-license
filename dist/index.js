@@ -44516,11 +44516,9 @@ const core = __nccwpck_require__(2186);
 const unity_cli_1 = __nccwpck_require__(4858);
 const failure_markers_1 = __nccwpck_require__(8545);
 async function Activate() {
-    let licensingClient;
     let licenseType = undefined;
     try {
         core.saveState('isPost', true);
-        licensingClient = new unity_cli_1.LicensingClient(core.getInput('license-version'));
         const licenseInput = core.getInput('license', { required: true });
         licenseType = licenseInput.toLowerCase();
         switch (licenseType) {
@@ -44532,13 +44530,6 @@ async function Activate() {
                 throw Error(`Invalid License: ${licenseInput}! Must be one of: ${Object.values(unity_cli_1.LicenseType).join(', ')}`);
         }
         core.saveState('license', licenseType);
-        if (licenseType !== unity_cli_1.LicenseType.floating) {
-            let activeLicenses = await licensingClient.GetActiveEntitlements();
-            if (activeLicenses.includes(licenseType)) {
-                core.info(`Unity ${licenseType} License already activated!`);
-                process.exit(0);
-            }
-        }
         core.info('Attempting to activate Unity License...');
         let servicesConfig = undefined;
         let username = undefined;
@@ -44583,16 +44574,15 @@ async function Activate() {
             if (password.length === 0) {
                 throw Error('Password is required for Unity License Activation!');
             }
+            core.setSecret(username);
+            core.setSecret(password);
+            if (serial) {
+                core.setSecret(serial);
+            }
         }
-        const token = await licensingClient.Activate({ licenseType, servicesConfig, serial, username, password }, true);
+        const token = await (0, unity_cli_1.ActivateLicense)({ licenseType, servicesConfig, serial, username, password });
         if (token) {
             core.saveState('activation-token', token);
-        }
-        if (licenseType !== unity_cli_1.LicenseType.floating) {
-            let activeLicenses = await licensingClient.GetActiveEntitlements();
-            if (!activeLicenses.includes(licenseType)) {
-                throw Error(`Failed to activate Unity License with ${licenseType}!`);
-            }
         }
         core.info(`Unity ${licenseType} License Activated!`);
     }

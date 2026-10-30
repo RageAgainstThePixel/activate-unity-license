@@ -1,17 +1,15 @@
 import core = require('@actions/core');
 import {
+    ActivateLicense,
     LicenseType,
-    LicensingClient,
 } from '@rage-against-the-pixel/unity-cli';
 import { ClassifyFailure } from '@rage-against-the-pixel/unity-cli/dist/failure-markers';
 
 export async function Activate(): Promise<void> {
-    let licensingClient: LicensingClient;
     let licenseType: LicenseType | undefined = undefined;
 
     try {
         core.saveState('isPost', true);
-        licensingClient = new LicensingClient(core.getInput('license-version'));
         const licenseInput = core.getInput('license', { required: true });
         licenseType = licenseInput.toLowerCase() as LicenseType;
 
@@ -25,16 +23,6 @@ export async function Activate(): Promise<void> {
         }
 
         core.saveState('license', licenseType);
-
-        if (licenseType !== LicenseType.floating) {
-            let activeLicenses = await licensingClient.GetActiveEntitlements();
-
-            if (activeLicenses.includes(licenseType)) {
-                core.info(`Unity ${licenseType} License already activated!`);
-                process.exit(0);
-            }
-        }
-
         core.info('Attempting to activate Unity License...');
 
         let servicesConfig: string | undefined = undefined;
@@ -99,20 +87,21 @@ export async function Activate(): Promise<void> {
             if (password.length === 0) {
                 throw Error('Password is required for Unity License Activation!');
             }
+
+            core.setSecret(username);
+            core.setSecret(password);
+
+            if (serial) {
+                core.setSecret(serial);
+            }
         }
 
-        const token = await licensingClient.Activate({ licenseType, servicesConfig, serial, username, password }, true);
+        // tries a cached license file (UNITY_LICENSE) and the official Unity CLI before the Unity Licensing Client;
+        // 4.x and 5.x editors are detected from the installed editor and use their own license version
+        const token = await ActivateLicense({ licenseType, servicesConfig, serial, username, password });
 
         if (token) {
             core.saveState('activation-token', token);
-        }
-
-        if (licenseType !== LicenseType.floating) {
-            let activeLicenses = await licensingClient.GetActiveEntitlements();
-
-            if (!activeLicenses.includes(licenseType)) {
-                throw Error(`Failed to activate Unity License with ${licenseType}!`);
-            }
         }
 
         core.info(`Unity ${licenseType} License Activated!`);
