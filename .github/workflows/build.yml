@@ -45,33 +45,25 @@ jobs:
         with:
           name: unity-license-${{ runner.os }}
           path: ${{ runner.temp }}/unity-license
-      - name: Install run license
+      - name: Decrypt run license
+        id: run-license
         if: ${{ steps.download-run-license.outcome == 'success' }}
         continue-on-error: true
         shell: pwsh
         env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |
-          $license = npx --yes @rage-against-the-pixel/unity-cli@4 license-file-path
-          if ($LASTEXITCODE -ne 0) { throw 'Could not find the license file path' }
           $dir = Join-Path $env:RUNNER_TEMP 'unity-license'
-          $decrypted = Join-Path $dir 'Unity_lic.ulf'
+          $license = Join-Path $dir 'Unity_lic.ulf'
           # the key never reaches a command line: openssl reads it from the environment
           $env:LICENSE_KEY = "$($env:CI_TOKEN):$($env:GITHUB_RUN_ID)"
-          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in (Join-Path $dir 'unity-license.enc') -out $decrypted -pass env:LICENSE_KEY
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in (Join-Path $dir 'unity-license.enc') -out $license -pass env:LICENSE_KEY
           if ($LASTEXITCODE -ne 0) { throw 'Could not decrypt the run license' }
-          try {
-            New-Item -ItemType Directory -Force -Path (Split-Path $license) -ErrorAction Stop | Out-Null
-            Copy-Item $decrypted $license -Force -ErrorAction Stop
-          } catch {
-            # the macOS license lives under /Library, which only root can write
-            sudo mkdir -p (Split-Path $license)
-            sudo cp $decrypted $license
-            if ($LASTEXITCODE -ne 0) { throw 'Could not install the run license' }
-          } finally {
-            Remove-Item -Recurse -Force $dir
-          }
+          "path=$license" >> $env:GITHUB_OUTPUT
       - uses: ./ # RageAgainstThePixel/activate-unity-license
+        env:
+          # activates from the run license when it fits this machine, otherwise signs in with the account
+          UNITY_LICENSE: ${{ steps.run-license.outputs.path }}
         with:
           license: Personal
           username: ${{ secrets.UNITY_USERNAME }}
