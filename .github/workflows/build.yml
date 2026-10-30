@@ -28,13 +28,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
-      # Hub 3.20+ installs to /usr/lib/unityhub, but unity-setup@v2 still checks /opt/unityhub/unityhub after installing it
-      - name: Link Unity Hub legacy path
-        if: ${{ runner.os == 'Linux' }}
-        run: |
-          sudo mkdir -p /opt/unityhub
-          sudo ln -sf /usr/lib/unityhub/unityhub /opt/unityhub/unityhub
-      - uses: RageAgainstThePixel/unity-setup@v2
+      - uses: RageAgainstThePixel/unity-setup@dev/v3.0.0 # until unity-setup v3 is tagged
         with:
           version-file: None
           unity-version: ${{ matrix.unity-version }}
