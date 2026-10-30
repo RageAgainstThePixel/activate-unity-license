@@ -44579,6 +44579,7 @@ async function Activate() {
                 core.setSecret(serial);
             }
         }
+        await (0, unity_cli_1.PrintLicenseContext)();
         const token = await (0, unity_cli_1.ActivateLicense)({ licenseType, servicesConfig, serial, username, password });
         core.saveState('license', licenseType);
         if (token) {
