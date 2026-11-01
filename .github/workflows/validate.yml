@@ -54,18 +54,18 @@ jobs:
       - uses: actions/checkout@v6
       - name: Check secrets
         id: secrets
-        shell: pwsh
+        shell: bash
         env:
           UNITY_USERNAME: ${{ secrets.UNITY_USERNAME }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |
-          if (-not $env:UNITY_USERNAME -or -not $env:UNITY_PASSWORD -or -not $env:CI_TOKEN) {
+          if [ -z "${UNITY_USERNAME}" ] || [ -z "${UNITY_PASSWORD}" ] || [ -z "${CI_TOKEN}" ]; then
             # pull requests from forks get no secrets; their rows fall back to their own activation
             echo '::warning::No Unity credentials or CI_TOKEN, so this run has no shared license'
             exit 0
-          }
-          "available=true" >> $env:GITHUB_OUTPUT
+          fi
+          echo "available=true" >> "${GITHUB_OUTPUT}"
       - uses: ./ # RageAgainstThePixel/activate-unity-license
         if: ${{ steps.secrets.outputs.available == 'true' }}
         with:
@@ -75,21 +75,20 @@ jobs:
       - name: Encrypt run license
         id: encrypt
         if: ${{ steps.secrets.outputs.available == 'true' && runner.os != 'Windows' }}
-        shell: pwsh
+        shell: bash
         env:
           # the encryption key comes from a random token, never the account password, so the public artifact gives
           # nobody a way to test password guesses offline
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |
-          $license = npx --yes @rage-against-the-pixel/unity-cli@4 license-file-path
-          if ($LASTEXITCODE -ne 0) { throw 'Could not find the license file path' }
-          $dir = Join-Path $env:RUNNER_TEMP 'unity-license'
-          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          set -euo pipefail
+          license="$(npx --yes @rage-against-the-pixel/unity-cli@4 license-file-path)"
+          dir="${RUNNER_TEMP}/unity-license"
+          mkdir -p "${dir}"
           # the key never reaches a command line: openssl reads it from the environment
-          $env:LICENSE_KEY = "$($env:CI_TOKEN):$($env:GITHUB_RUN_ID)"
-          openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in "$license" -out (Join-Path $dir 'unity-license.enc') -pass env:LICENSE_KEY
-          if ($LASTEXITCODE -ne 0) { throw 'Could not encrypt the run license' }
-          "encrypted=true" >> $env:GITHUB_OUTPUT
+          export LICENSE_KEY="${CI_TOKEN}:${GITHUB_RUN_ID}"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in "${license}" -out "${dir}/unity-license.enc" -pass env:LICENSE_KEY
+          echo "encrypted=true" >> "${GITHUB_OUTPUT}"
       - uses: actions/upload-artifact@v7
         if: ${{ steps.encrypt.outputs.encrypted == 'true' }}
         with:
@@ -121,17 +120,18 @@ jobs:
       actions: write # to delete this run's license artifacts
     steps:
       - name: Delete the run license
-        shell: pwsh
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $ids = gh api "repos/$($env:GITHUB_REPOSITORY)/actions/runs/$($env:GITHUB_RUN_ID)/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.name | startswith("unity-license-")) | .id'
-          if ($LASTEXITCODE -ne 0) { throw 'Could not list the run artifacts' }
-          foreach ($id in $ids) {
-            gh api -X DELETE "repos/$($env:GITHUB_REPOSITORY)/actions/artifacts/$id"
-            if ($LASTEXITCODE -ne 0) { throw "Could not delete artifact $id" }
-          }
-          echo "Deleted $(@($ids).Count) license artifacts"
+          set -euo pipefail
+          ids="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.name | startswith("unity-license-")) | .id')"
+          count=0
+          for id in ${ids}; do
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}"
+            count=$((count + 1))
+          done
+          echo "Deleted ${count} license artifacts"
   timeline:
     needs: [setup, license, validate]
     if: always()
