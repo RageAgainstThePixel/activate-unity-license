@@ -49,17 +49,17 @@ jobs:
         id: run-license
         if: ${{ steps.download-run-license.outcome == 'success' }}
         continue-on-error: true
-        shell: pwsh
+        shell: bash
         env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |
-          $dir = Join-Path $env:RUNNER_TEMP 'unity-license'
-          $license = Join-Path $dir 'Unity_lic.ulf'
+          set -euo pipefail
+          dir="${RUNNER_TEMP}/unity-license"
+          license="${dir}/Unity_lic.ulf"
           # the key never reaches a command line: openssl reads it from the environment
-          $env:LICENSE_KEY = "$($env:CI_TOKEN):$($env:GITHUB_RUN_ID)"
-          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in (Join-Path $dir 'unity-license.enc') -out $license -pass env:LICENSE_KEY
-          if ($LASTEXITCODE -ne 0) { throw 'Could not decrypt the run license' }
-          "path=$license" >> $env:GITHUB_OUTPUT
+          export LICENSE_KEY="${CI_TOKEN}:${GITHUB_RUN_ID}"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in "${dir}/unity-license.enc" -out "${license}" -pass env:LICENSE_KEY
+          echo "path=${license}" >> "${GITHUB_OUTPUT}"
       - uses: ./ # RageAgainstThePixel/activate-unity-license
         env:
           # activates from the run license when it fits this machine, otherwise signs in with the account
