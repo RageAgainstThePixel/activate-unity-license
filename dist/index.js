@@ -4895,24 +4895,38 @@ function IsSharedRunnerIdentity() {
  * Returns a Unity license through the official Unity CLI first, then the Unity Licensing Client.
  * @param licenseType The type of license to return.
  * @param token The floating license token from activation. A floating license with a token is returned by the Unity Licensing Client.
- * @param when `auto` (the default) skips returning a personal or professional license on a shared runner identity.
+ * @param when `auto` (the default) skips returning a personal license on a shared runner identity. Professional and
+ * floating licenses always return under `auto`: a professional seat that is never returned stays taken.
  */
 async function ReturnLicense(licenseType, token = undefined, when = 'auto') {
     try {
         if (when === 'never') {
             logging_1.Logger.instance.info('Skipping the license return (--when never).');
+            warnProfessionalSeat(licenseType, 'was not returned');
         }
-        else if (when === 'auto' && licenseType !== LicenseType.floating && IsSharedRunnerIdentity()) {
+        else if (when === 'auto' && licenseType === LicenseType.personal && IsSharedRunnerIdentity()) {
             logging_1.Logger.instance.info('Skipping the license return: GitHub-hosted macOS and Linux runners share one machine identity, so a return would revoke the license for every job and repo on it. Use --when always to return anyway.');
         }
         else {
-            await returnLicense(licenseType, token);
+            try {
+                await returnLicense(licenseType, token);
+            }
+            catch (error) {
+                warnProfessionalSeat(licenseType, 'could not be returned');
+                throw error;
+            }
         }
     }
     finally {
         // returning is the last licensing step of a job, so stop what the licensing calls left running in the background
         await LicensingClient.StopBackgroundClients();
         await stopUnityCliHelpers();
+    }
+}
+/** Warns that a professional seat stays taken until it is released by hand. */
+function warnProfessionalSeat(licenseType, outcome) {
+    if (licenseType === LicenseType.professional) {
+        logging_1.Logger.instance.warn(`The professional license ${outcome}, so its seat stays taken. Release it at id.unity.com > My Seats.`);
     }
 }
 /**
@@ -7007,6 +7021,14 @@ const unity_logging_1 = __nccwpck_require__(6753);
 /** Thrown when `unity run` refuses the editor arguments before it starts the editor. */
 class UnityRunRejectedError extends Error {
 }
+/** Thrown when `unity run` refuses to start because another editor still has the project open. */
+class UnityProjectOpenError extends Error {
+    pid;
+    constructor(message, pid) {
+        super(message);
+        this.pid = pid;
+    }
+}
 class UnityEditor {
     /** Editor flags whose values are never logged. */
     static SENSITIVE_FLAGS = ['-username', '-password', '-cloudOrganization', '-serial'];
@@ -7112,6 +7134,13 @@ class UnityEditor {
             await this.runEditor(command, true);
         }
         catch (error) {
+            if (error instanceof UnityProjectOpenError) {
+                // an earlier editor whose launcher went away can still hold the project, so wait for it and launch once more
+                this.logger.warn(`${error.message}\nWaiting for the editor (PID ${error.pid}) to exit before launching again...`);
+                await UnityEditor.WaitForProcessExit(error.pid, UnityEditor.PROJECT_OPEN_TIMEOUT_MS);
+                await this.runEditor(command, true);
+                return;
+            }
             if (!(error instanceof UnityRunRejectedError)) {
                 throw error;
             }
@@ -7119,6 +7148,29 @@ class UnityEditor {
             this.logger.warn(`${error.message}\nLaunching the editor directly instead.`);
             await this.runEditor(command, false);
         }
+    }
+    /** How long to wait for another editor to release the project before launching again. */
+    static PROJECT_OPEN_TIMEOUT_MS = 10 * 60 * 1000;
+    /**
+     * Waits for a process to exit.
+     * @param pid The process id.
+     * @param timeoutMs The longest to wait; past it, the wait ends without an error.
+     */
+    static async WaitForProcessExit(pid, timeoutMs) {
+        const deadline = Date.now() + timeoutMs;
+        while (Date.now() < deadline) {
+            try {
+                process.kill(pid, 0);
+            }
+            catch (error) {
+                // EPERM means the process exists but belongs to another user
+                if (error?.code !== 'EPERM') {
+                    return;
+                }
+            }
+            await (0, utilities_1.Delay)(1000);
+        }
+        logging_1.Logger.instance.warn(`Process ${pid} was still running after ${timeoutMs / 1000} seconds`);
     }
     async runEditor(command, allowUnityRun) {
         let isCancelled = false;
@@ -7327,6 +7379,10 @@ class UnityEditor {
                         .split(/\r?\n/).filter(line => line.length > 0 && !line.includes('<claude-code-hint')).join('\n');
                     if (output.includes('conflicts with a reserved Unity flag')) {
                         throw new UnityRunRejectedError(`unity run rejected the editor arguments:\n${output}`);
+                    }
+                    const projectOpen = /already open in a running Editor \(PID (\d+)\)/.exec(output);
+                    if (projectOpen) {
+                        throw new UnityProjectOpenError(`unity run did not start the editor:\n${output}`, parseInt(projectOpen[1], 10));
                     }
                     if (output.length > 0) {
                         this.logger.info(`unity run output:\n${output}`);
